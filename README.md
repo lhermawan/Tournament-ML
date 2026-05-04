@@ -57,8 +57,8 @@ docker compose up --build
 
 Akses layanan:
 
-- App: `http://localhost:4000`
-- MySQL: `localhost:3306`
+- App: `http://localhost:${APP_PORT:-4000}`
+- MySQL: `localhost:${MYSQL_PORT:-3306}`
 
 Default kredensial MySQL di compose:
 
@@ -72,6 +72,18 @@ Kalau mau ganti password/nama DB tanpa edit compose, buat file `.env`:
 MYSQL_ROOT_PASSWORD=PasswordKamu
 MYSQL_DATABASE=ml_dleague
 ```
+
+Kalau di Docker kamu sudah ada aplikasi lain (port bentrok), ganti port host di `.env`:
+
+```env
+APP_PORT=4010
+MYSQL_PORT=3307
+MYSQL_ROOT_PASSWORD=PasswordKamu
+MYSQL_DATABASE=ml_dleague
+```
+
+Dengan ini kamu bisa jalanin banyak stack sekaligus tanpa bentrok port.
+
 
 Lalu jalankan ulang:
 

@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ml_dleague_app
     restart: always
     depends_on:
       db:
@@ -14,17 +13,16 @@ services:
       DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-Diskominfo2026#}@db:3306/${MYSQL_DATABASE:-ml_dleague}
       NODE_ENV: production
     ports:
-      - "4000:3000"
+      - "${APP_PORT:-4000}:3000"
 
   db:
     image: mysql:8.0
-    container_name: ml_dleague_mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Diskominfo2026#}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ml_dleague}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./db/ml_dleague.sql:/docker-entrypoint-initdb.d/01-ml_dleague.sql:ro
