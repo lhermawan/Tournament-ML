@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { LogIn } from "lucide-react";
 import { loginUser } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { ActionSubmitButton } from "@/components/ui/action-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
@@ -22,10 +21,7 @@ export default function LoginPage() {
               Password
               <input name="password" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" type="password" placeholder="admin12345" />
             </label>
-            <Button className="w-full" type="submit">
-              <LogIn className="h-4 w-4" />
-              Masuk
-            </Button>
+            <ActionSubmitButton className="w-full" label="Masuk" pendingLabel="Sedang masuk..." />
           </form>
           <p className="mt-5 text-center text-sm text-muted-foreground">
             Belum punya akun?{" "}
