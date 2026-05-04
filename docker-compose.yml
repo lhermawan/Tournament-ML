@@ -1,36 +1,38 @@
-services:
-  db:
-    image: mysql:8.4
-    container_name: ml_dleague_db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ml_dleague
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./db/ml_dleague.sql:/docker-entrypoint-initdb.d/01-ml_dleague.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+version: '3.9'
 
+services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ml_dleague_app
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql://root:root@db:3306/ml_dleague
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-Diskominfo2026#}@db:3306/${MYSQL_DATABASE:-ml_dleague}
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "4000:3000"
+
+  db:
+    image: mysql:8.0
+    container_name: ml_dleague_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Diskominfo2026#}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ml_dleague}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/ml_dleague.sql:/docker-entrypoint-initdb.d/01-ml_dleague.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-Diskominfo2026#}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  db_data:
+  mysql_data:
