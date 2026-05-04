@@ -16,6 +16,7 @@ import {
 } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { ActionSubmitButton } from "@/components/ui/action-submit-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SectionTitle } from "@/components/section-title";
@@ -36,6 +37,7 @@ type AdminPageProps = {
     gameError?: string;
     gameSaved?: string;
     teamsReset?: string;
+    notice?: string;
   }>;
 };
 
@@ -63,6 +65,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             Mode demo aktif karena database belum bisa diakses. Setelah MySQL dan `.env` siap, action admin akan memakai data asli.
           </p>
         </Card>
+      )}
+
+      {params?.notice && (
+        <p className="mb-4 animate-in fade-in slide-in-from-top-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700">
+          {params.notice === "season-created" && "Season berhasil dibuat."}
+          {params.notice === "status-updated" && "Status season berhasil diperbarui."}
+          {params.notice === "teams-generated" && "Team berhasil digenerate."}
+          {params.notice === "schedule-generated" && "Jadwal berhasil digenerate."}
+          {params.notice === "live-updated" && "Live score berhasil diupdate."}
+          {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
+          {params.notice === "player-verified" && "Peserta berhasil diverifikasi."}
+          {params.notice === "match-saved" && "Hasil match berhasil disimpan."}
+        </p>
       )}
 
       {params?.teamsReset && (
@@ -322,7 +337,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 MVP Sementara
                 <input name="mvp" list="player-nicknames" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm" placeholder="Nickname MVP sementara" defaultValue={pendingMatch?.mvp ?? ""} />
               </label>
-              <Button type="submit" className="w-full" disabled={!pendingMatch}>Update Live Score</Button>
+              <ActionSubmitButton className="w-full" label="Update Live Score" pendingLabel="Mengupdate live score..." />
             </form>
 
             <form action={saveMatchGameResult} className="space-y-4 rounded-md border border-border bg-white p-4">
@@ -383,7 +398,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 URL Screenshot Opsional
                 <input name="screenshotUrl" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" placeholder="Isi kalau screenshot sudah di-upload di tempat lain" />
               </label>
-              <Button type="submit" className="w-full" disabled={!pendingMatch}>Simpan Detail Game BO3</Button>
+              <ActionSubmitButton className="w-full" label="Simpan Detail Game BO3" pendingLabel="Menyimpan detail game..." />
             </form>
 
             {pendingMatch?.games?.length ? (
@@ -438,7 +453,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 </div>
                 <input name="screenshotUrl" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" placeholder="URL screenshot opsional" />
               </label>
-              <Button type="submit" className="w-full" disabled={!pendingMatch}>Simpan Hasil</Button>
+              <ActionSubmitButton className="w-full" label="Simpan Hasil" pendingLabel="Menyimpan hasil..." />
             </form>
             <datalist id="player-nicknames">
               {players.map((player) => (
@@ -526,7 +541,7 @@ function AdminAction({
   primary?: boolean;
 }) {
   return (
-    <button className={`flex min-h-24 w-full flex-col items-start justify-between rounded-lg border p-4 text-left shadow-soft transition hover:-translate-y-0.5 ${primary ? "border-primary bg-primary text-white" : "border-border bg-white"}`}>
+    <button type="submit" className={`flex min-h-24 w-full flex-col items-start justify-between rounded-lg border p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:shadow-md ${primary ? "border-primary bg-primary text-white" : "border-border bg-white"}`}>
       <Icon className="h-5 w-5" />
       <span className="text-sm font-black">{label}</span>
     </button>

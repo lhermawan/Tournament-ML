@@ -167,6 +167,7 @@ export async function createSeason(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=season-created");
 }
 
 export async function setSeasonStatus(formData: FormData) {
@@ -180,6 +181,7 @@ export async function setSeasonStatus(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=status-updated");
 }
 
 export async function verifyPlayer(formData: FormData) {
@@ -192,12 +194,14 @@ export async function verifyPlayer(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=player-verified");
 }
 
 export async function verifyAllPlayers() {
   await assertAdmin();
   await prisma.player.updateMany({ data: { verified: true } });
   revalidateAll();
+  redirect("/admin?notice=all-verified");
 }
 
 export async function updatePlayer(formData: FormData) {
@@ -296,6 +300,7 @@ export async function generateTeamsAction(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=teams-generated");
 }
 
 export async function resetTeamsAction(formData: FormData) {
@@ -451,6 +456,7 @@ export async function generateScheduleAction(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=schedule-generated");
 }
 
 export async function updateLiveScore(formData: FormData) {
@@ -478,6 +484,7 @@ export async function updateLiveScore(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=live-updated");
 }
 
 export async function saveMatchGameResult(formData: FormData) {
@@ -585,6 +592,7 @@ export async function saveMatchResult(formData: FormData) {
   });
 
   revalidateAll();
+  redirect("/admin?notice=match-saved");
 }
 
 async function assertAdmin() {
