@@ -40,6 +40,28 @@ Jika MySQL kamu memakai password, ubah menjadi:
 DATABASE_URL="mysql://root:password_kamu@localhost:3306/ml_dleague"
 ```
 
+## Menjalankan dengan Docker
+
+Pastikan file SQL awal tersedia di `db/ml_dleague.sql` (sudah ada di repo ini).
+
+```bash
+docker compose up --build
+```
+
+Layanan yang akan berjalan:
+
+- App Next.js: `http://localhost:3000`
+- MySQL: `localhost:3306` (user `root`, password `root`)
+
+`docker-compose.yml` sudah me-mount `db/ml_dleague.sql` ke `/docker-entrypoint-initdb.d`, jadi database `ml_dleague` otomatis diinisialisasi saat container MySQL pertama kali dibuat.
+
+> Kalau pernah menjalankan sebelumnya dan ingin import ulang SQL dari awal, hapus volume dulu:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 ## Setup Database
 
 Buat database di MySQL/MariaDB:
