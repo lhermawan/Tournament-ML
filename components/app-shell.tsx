@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, LayoutDashboard, LogIn, Trophy, UsersRound } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogIn, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { logoutUser } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -13,7 +13,11 @@ const publicNav = [
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
-  const nav = user ? publicNav : [...publicNav, { href: "/login", label: "Login", icon: LogIn }];
+  const nav = user
+    ? user.role === "admin"
+      ? [...publicNav, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+      : publicNav
+    : [...publicNav, { href: "/login", label: "Login", icon: LogIn }];
 
   return (
     <div className="min-h-screen">
