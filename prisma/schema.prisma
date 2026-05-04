@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(player)
+  player    Player?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Player {
+  id         String       @id @default(cuid())
+  userId     String       @unique
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname   String
+  mlId       String
+  phone      String
+  unit       String
+  rank       Rank
+  mainRole   PlayerRole
+  secondRole PlayerRole?
+  verified   Boolean      @default(false)
+  members    TeamMember[]
+  mvpMatches Match[]      @relation("MatchMvp")
+  mvpGames   MatchGame[]  @relation("GameMvp")
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Season {
+  id        String       @id @default(cuid())
+  name      String
+  status    SeasonStatus @default(draft)
+  teams     Team[]
+  matches   Match[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model Team {
+  id        String       @id @default(cuid())
+  seasonId  String
+  season    Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  teamName  String
+  power     Int          @default(0)
+  members   TeamMember[]
+  homeGames Match[]      @relation("TeamA")
+  awayGames Match[]      @relation("TeamB")
+  wins      Match[]      @relation("Winner")
+  gameWins  MatchGame[]  @relation("GameWinner")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([seasonId])
+}
+
+model TeamMember {
+  id       String     @id @default(cuid())
+  teamId   String
+  team     Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  laneRole PlayerRole
+
+  @@unique([teamId, laneRole])
+  @@unique([teamId, playerId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  seasonId  String
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  week      Int
+  teamAId   String
+  teamA     Team     @relation("TeamA", fields: [teamAId], references: [id])
+  teamBId   String
+  teamB     Team     @relation("TeamB", fields: [teamBId], references: [id])
+  winnerId  String?
+  winner    Team?    @relation("Winner", fields: [winnerId], references: [id])
+  scoreA    Int?
+  scoreB    Int?
+  mvpId     String?
+  mvp       Player?  @relation("MatchMvp", fields: [mvpId], references: [id])
+  screenshotUrl String?
+  games     MatchGame[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([seasonId])
+}
+
+model MatchGame {
+  id            String   @id @default(cuid())
+  matchId       String
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  gameNumber    Int
+  winnerId      String?
+  winner        Team?    @relation("GameWinner", fields: [winnerId], references: [id])
+  mvpId         String?
+  mvp           Player?  @relation("GameMvp", fields: [mvpId], references: [id])
+  mvpKills      Int      @default(0)
+  mvpDeaths     Int      @default(0)
+  mvpAssists    Int      @default(0)
+  screenshotUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([matchId, gameNumber])
+  @@index([mvpId])
+  @@index([winnerId])
+}
+
+enum UserRole {
+  admin
+  player
+}
+
+enum SeasonStatus {
+  draft
+  registration
+  locked
+  league
+  playoff
+  completed
+}
+
+enum PlayerRole {
+  Jungler
+  Mid_Lane
+  Gold_Lane
+  EXP_Lane
+  Roamer
+}
+
+enum Rank {
+  Master
+  Grandmaster
+  Epic
+  Legend
+  Mythic
+}
