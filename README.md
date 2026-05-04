@@ -40,6 +40,53 @@ Jika MySQL kamu memakai password, ubah menjadi:
 DATABASE_URL="mysql://root:password_kamu@localhost:3306/ml_dleague"
 ```
 
+## Menjalankan dengan Docker (Windows/Linux/macOS)
+
+Bisa digabung 1 `docker-compose.yml` untuk app + MySQL (seperti contoh kamu).
+Di repo ini sudah disiapkan model yang sama:
+
+- Service `app` (Next.js)
+- Service `db` (MySQL 8.0)
+- SQL bootstrap dari `db/ml_dleague.sql`
+
+Jalankan:
+
+```bash
+docker compose up --build
+```
+
+Akses layanan:
+
+- App: `http://localhost:4000`
+- MySQL: `localhost:3306`
+
+Default kredensial MySQL di compose:
+
+- user: `root`
+- password: `Diskominfo2026#`
+- database: `ml_dleague`
+
+Kalau mau ganti password/nama DB tanpa edit compose, buat file `.env`:
+
+```env
+MYSQL_ROOT_PASSWORD=PasswordKamu
+MYSQL_DATABASE=ml_dleague
+```
+
+Lalu jalankan ulang:
+
+```bash
+docker compose up --build
+```
+
+> Catatan penting: file SQL di `/docker-entrypoint-initdb.d` hanya dieksekusi saat volume database masih baru.
+> Kalau ingin import ulang dari nol:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 ## Setup Database
 
 Buat database di MySQL/MariaDB:
