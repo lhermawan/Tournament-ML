@@ -144,6 +144,9 @@ export default async function PlayersPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 Main role: <span className="font-semibold text-foreground">{player.mainRole}</span>
               </p>
+              <p className="text-xs text-muted-foreground">
+                Role cadangan: <span className="font-semibold text-foreground">{player.secondRole ?? "-"}</span>
+              </p>
             </div>
           ))}
           {!players.length && <p className="text-sm text-muted-foreground">Belum ada player terdaftar.</p>}
