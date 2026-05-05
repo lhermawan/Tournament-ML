@@ -1,12 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, LayoutDashboard, LogIn, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogIn, ShieldCheck, Trophy, UserRound, UsersRound } from "lucide-react";
 import { logoutUser } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
 const publicNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/teams", label: "Tim", icon: UsersRound },
+  { href: "/players", label: "Player", icon: UserRound },
   { href: "/schedule", label: "Jadwal", icon: CalendarDays },
   { href: "/standings", label: "Klasemen", icon: Trophy }
 ];
