@@ -13,14 +13,30 @@ export default async function PlayersPage() {
     total: players.filter((player) => player.mainRole === role || player.secondRole === role).length
   }));
 
+  const sortedRoleCounts = [...roleCounts].sort((a, b) => a.total - b.total);
+  const minimumRoleCount = sortedRoleCounts[0]?.total ?? 0;
+  const priorityRoles = sortedRoleCounts.filter((item) => item.total === minimumRoleCount).map((item) => item.role);
+
   const teamRoleAudit = teams.map((team) => {
     const rolesInTeam = new Set(team.members.map((member) => member.laneRole));
     const missingRoles = ROLES.filter((role) => !rolesInTeam.has(role));
+    const memberIds = new Set(team.members.map((member) => member.player.id));
+
+    const recommendedPlayers = players
+      .filter((player) => !memberIds.has(player.id))
+      .filter((player) => missingRoles.some((role) => player.mainRole === role || player.secondRole === role))
+      .slice(0, 3)
+      .map((player) => ({
+        id: player.id,
+        nickname: player.nickname,
+        fittingRoles: missingRoles.filter((role) => player.mainRole === role || player.secondRole === role)
+      }));
 
     return {
       ...team,
       isComplete: missingRoles.length === 0,
-      missingRoles
+      missingRoles,
+      recommendedPlayers
     };
   });
 
@@ -57,12 +73,24 @@ export default async function PlayersPage() {
         </Card>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Rekomendasi Role Prioritas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Role dengan jumlah pemain paling sedikit saat ini: <span className="font-semibold text-foreground">{priorityRoles.join(", ") || "-"}</span>
+            {" "}(masing-masing {minimumRoleCount} player).
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         {teamRoleAudit.map((team) => (
           <Card key={team.id}>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>{team.name}</CardTitle>
-              {team.isComplete ? <Badge tone="success">Semua role lengkap</Badge> : <Badge tone="danger">Belum lengkap</Badge>}
+              {team.isComplete ? <Badge tone="success">Semua role lengkap</Badge> : <Badge tone="warning">Belum lengkap</Badge>}
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
@@ -76,7 +104,23 @@ export default async function PlayersPage() {
                 })}
               </div>
               {!team.isComplete && (
-                <p className="text-sm text-muted-foreground">Kurang role: {team.missingRoles.join(", ")}</p>
+                <>
+                  <p className="text-sm text-muted-foreground">Kurang role: {team.missingRoles.join(", ")}</p>
+                  <div className="rounded-md bg-muted p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rekomendasi player pengisi role</p>
+                    {team.recommendedPlayers.length ? (
+                      <div className="space-y-2">
+                        {team.recommendedPlayers.map((player) => (
+                          <p key={player.id} className="text-sm">
+                            <span className="font-semibold">{player.nickname}</span> cocok untuk: {player.fittingRoles.join(", ")}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Belum ada kandidat dari daftar pemain saat ini.</p>
+                    )}
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
