@@ -14,9 +14,9 @@ export async function getLeagueData() {
     const season = await prisma.season.findFirst({
       orderBy: { createdAt: "desc" },
       include: {
-        teams: {
+        team: {
           include: {
-            members: {
+            teammember: {
               include: {
                 player: {
                   include: {
@@ -27,15 +27,15 @@ export async function getLeagueData() {
             }
           }
         },
-        matches: {
+        match: {
           include: {
-            teamA: true,
-            teamB: true,
-            mvp: true,
-            games: {
+            team_match_teamAIdToteam: true,
+            team_match_teamBIdToteam: true,
+            player: true,
+            matchgame: {
               include: {
-                winner: true,
-                mvp: true
+                team: true,
+                player: true
               },
               orderBy: { gameNumber: "asc" }
             }
@@ -63,34 +63,34 @@ export async function getLeagueData() {
       };
     }
 
-    const teams = season.teams.map((team) => ({
+    const teams = season.team.map((team) => ({
       id: team.id,
       name: team.teamName,
       power: team.power,
-      members: team.members.map((member) => ({
+      members: team.teammember.map((member) => ({
         laneRole: roleFromDb[member.laneRole],
         player: mapPlayer(member.player)
       }))
     }));
 
-    const matches = season.matches.map((match) => ({
+    const matches = season.match.map((match) => ({
       id: match.id,
       week: match.week,
       teamAId: match.teamAId,
       teamBId: match.teamBId,
-      teamAName: match.teamA.teamName,
-      teamBName: match.teamB.teamName,
+      teamAName: match.team_match_teamAIdToteam.teamName,
+      teamBName: match.team_match_teamBIdToteam.teamName,
       winnerId: match.winnerId ?? undefined,
       scoreA: match.scoreA ?? undefined,
       scoreB: match.scoreB ?? undefined,
-      mvp: match.mvp?.nickname,
-      games: match.games.map((game) => ({
+      mvp: match.player?.nickname,
+      games: match.matchgame.map((game) => ({
         id: game.id,
         gameNumber: game.gameNumber,
         winnerId: game.winnerId ?? undefined,
-        winnerName: game.winner?.teamName,
+        winnerName: game.team?.teamName,
         mvpId: game.mvpId ?? undefined,
-        mvp: game.mvp?.nickname,
+        mvp: game.player?.nickname,
         mvpKills: game.mvpKills,
         mvpDeaths: game.mvpDeaths,
         mvpAssists: game.mvpAssists,
