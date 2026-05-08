@@ -7,125 +7,125 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      UserRole @default(player)
-  player    Player?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model match {
+  id                        String      @id
+  seasonId                  String
+  week                      Int
+  teamAId                   String
+  teamBId                   String
+  winnerId                  String?
+  scoreA                    Int?
+  scoreB                    Int?
+  mvpId                     String?
+  screenshotUrl             String?
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime
+  player                    player?     @relation(fields: [mvpId], references: [id], map: "Match_mvpId_fkey")
+  season                    season      @relation(fields: [seasonId], references: [id], onDelete: Cascade, map: "Match_seasonId_fkey")
+  team_match_teamAIdToteam  team        @relation("match_teamAIdToteam", fields: [teamAId], references: [id], onDelete: NoAction, map: "Match_teamAId_fkey")
+  team_match_teamBIdToteam  team        @relation("match_teamBIdToteam", fields: [teamBId], references: [id], onDelete: NoAction, map: "Match_teamBId_fkey")
+  team_match_winnerIdToteam team?       @relation("match_winnerIdToteam", fields: [winnerId], references: [id], map: "Match_winnerId_fkey")
+  matchgame                 matchgame[]
+
+  @@index([mvpId], map: "Match_mvpId_fkey")
+  @@index([seasonId], map: "Match_seasonId_idx")
+  @@index([teamAId], map: "Match_teamAId_fkey")
+  @@index([teamBId], map: "Match_teamBId_fkey")
+  @@index([winnerId], map: "Match_winnerId_fkey")
 }
 
-model Player {
-  id         String       @id @default(cuid())
-  userId     String       @unique
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nickname   String
-  mlId       String
-  phone      String
-  unit       String
-  rank       Rank
-  mainRole   PlayerRole
-  secondRole PlayerRole?
-  verified   Boolean      @default(false)
-  members    TeamMember[]
-  mvpMatches Match[]      @relation("MatchMvp")
-  mvpGames   MatchGame[]  @relation("GameMvp")
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-}
-
-model Season {
-  id        String       @id @default(cuid())
-  name      String
-  status    SeasonStatus @default(draft)
-  teams     Team[]
-  matches   Match[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-}
-
-model Team {
-  id        String       @id @default(cuid())
-  seasonId  String
-  season    Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  teamName  String
-  power     Int          @default(0)
-  members   TeamMember[]
-  homeGames Match[]      @relation("TeamA")
-  awayGames Match[]      @relation("TeamB")
-  wins      Match[]      @relation("Winner")
-  gameWins  MatchGame[]  @relation("GameWinner")
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  @@index([seasonId])
-}
-
-model TeamMember {
-  id       String     @id @default(cuid())
-  teamId   String
-  team     Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  playerId String
-  player   Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  laneRole PlayerRole
-
-  @@unique([teamId, laneRole])
-  @@unique([teamId, playerId])
-}
-
-model Match {
-  id        String   @id @default(cuid())
-  seasonId  String
-  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  week      Int
-  teamAId   String
-  teamA     Team     @relation("TeamA", fields: [teamAId], references: [id])
-  teamBId   String
-  teamB     Team     @relation("TeamB", fields: [teamBId], references: [id])
-  winnerId  String?
-  winner    Team?    @relation("Winner", fields: [winnerId], references: [id])
-  scoreA    Int?
-  scoreB    Int?
-  mvpId     String?
-  mvp       Player?  @relation("MatchMvp", fields: [mvpId], references: [id])
-  screenshotUrl String?
-  games     MatchGame[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([seasonId])
-}
-
-model MatchGame {
-  id            String   @id @default(cuid())
+model matchgame {
+  id            String   @id
   matchId       String
-  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   gameNumber    Int
   winnerId      String?
-  winner        Team?    @relation("GameWinner", fields: [winnerId], references: [id])
   mvpId         String?
-  mvp           Player?  @relation("GameMvp", fields: [mvpId], references: [id])
   mvpKills      Int      @default(0)
   mvpDeaths     Int      @default(0)
   mvpAssists    Int      @default(0)
   screenshotUrl String?
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime
+  match         match    @relation(fields: [matchId], references: [id], onDelete: Cascade, map: "MatchGame_matchId_fkey")
+  player        player?  @relation(fields: [mvpId], references: [id], map: "MatchGame_mvpId_fkey")
+  team          team?    @relation(fields: [winnerId], references: [id], map: "MatchGame_winnerId_fkey")
 
-  @@unique([matchId, gameNumber])
-  @@index([mvpId])
-  @@index([winnerId])
+  @@unique([matchId, gameNumber], map: "MatchGame_matchId_gameNumber_key")
+  @@index([mvpId], map: "MatchGame_mvpId_idx")
+  @@index([winnerId], map: "MatchGame_winnerId_idx")
 }
 
-enum UserRole {
-  admin
-  player
+model player {
+  id         String             @id
+  userId     String             @unique(map: "Player_userId_key")
+  nickname   String
+  mlId       String
+  phone      String
+  unit       String
+  rank       player_rank
+  mainRole   player_mainRole
+  secondRole player_secondRole?
+  verified   Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime
+  match      match[]
+  matchgame  matchgame[]
+  user       user               @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Player_userId_fkey")
+  teammember teammember[]
 }
 
-enum SeasonStatus {
+model season {
+  id        String        @id
+  name      String
+  status    season_status @default(draft)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime
+  match     match[]
+  team      team[]
+}
+
+model team {
+  id                         String       @id
+  seasonId                   String
+  teamName                   String
+  power                      Int          @default(0)
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime
+  match_match_teamAIdToteam  match[]      @relation("match_teamAIdToteam")
+  match_match_teamBIdToteam  match[]      @relation("match_teamBIdToteam")
+  match_match_winnerIdToteam match[]      @relation("match_winnerIdToteam")
+  matchgame                  matchgame[]
+  season                     season       @relation(fields: [seasonId], references: [id], onDelete: Cascade, map: "Team_seasonId_fkey")
+  teammember                 teammember[]
+
+  @@index([seasonId], map: "Team_seasonId_idx")
+}
+
+model teammember {
+  id       String              @id
+  teamId   String
+  playerId String
+  laneRole teammember_laneRole
+  player   player              @relation(fields: [playerId], references: [id], onDelete: Cascade, map: "TeamMember_playerId_fkey")
+  team     team                @relation(fields: [teamId], references: [id], onDelete: Cascade, map: "TeamMember_teamId_fkey")
+
+  @@unique([teamId, laneRole], map: "TeamMember_teamId_laneRole_key")
+  @@unique([teamId, playerId], map: "TeamMember_teamId_playerId_key")
+  @@index([playerId], map: "TeamMember_playerId_fkey")
+}
+
+model user {
+  id        String    @id
+  name      String
+  email     String    @unique(map: "User_email_key")
+  password  String
+  role      user_role @default(player)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime
+  player    player?
+}
+
+enum season_status {
   draft
   registration
   locked
@@ -134,7 +134,7 @@ enum SeasonStatus {
   completed
 }
 
-enum PlayerRole {
+enum teammember_laneRole {
   Jungler
   Mid_Lane
   Gold_Lane
@@ -142,10 +142,31 @@ enum PlayerRole {
   Roamer
 }
 
-enum Rank {
+enum user_role {
+  admin
+  player
+}
+
+enum player_rank {
   Master
   Grandmaster
   Epic
   Legend
   Mythic
+}
+
+enum player_mainRole {
+  Jungler
+  Mid_Lane
+  Gold_Lane
+  EXP_Lane
+  Roamer
+}
+
+enum player_secondRole {
+  Jungler
+  Mid_Lane
+  Gold_Lane
+  EXP_Lane
+  Roamer
 }
