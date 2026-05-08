@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function getLeagueData() {
   if (!process.env.DATABASE_URL) {
+    console.warn("[getLeagueData] DATABASE_URL tidak ditemukan. Menggunakan mode demo.");
     return getDemoData();
   }
 
@@ -111,7 +112,9 @@ export async function getLeagueData() {
       standings: calculateStandings(teams, matches),
       playerStandings: calculatePlayerStandings(mappedPlayers, teams, matches)
     };
-  } catch {
+  } catch (error) {
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error(`[getLeagueData] Gagal terhubung/memuat data database. Beralih ke mode demo. Penyebab: ${reason}`);
     return getDemoData();
   }
 }
