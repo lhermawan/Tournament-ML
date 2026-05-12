@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SectionTitle } from "@/components/section-title";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueData } from "@/lib/data";
+import { ROLES } from "@/lib/types";
 
 type TeamsPageProps = {
   searchParams?: Promise<{ moveSaved?: string; moveError?: string }>;
