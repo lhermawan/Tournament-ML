@@ -533,12 +533,13 @@ export async function saveMatchGameResult(formData: FormData) {
   const screenshotFile = formData.get("screenshot");
   const screenshotUrlInput = String(formData.get("screenshotUrl") ?? "").trim();
 
-  if (!matchId || ![1, 2, 3].includes(gameNumber) || !winnerId) {
+  if (!matchId || ![1, 2, 3, 4, 5].includes(gameNumber) || !winnerId) {
     redirect("/admin?gameError=invalid");
   }
 
   const match = await prisma.match.findUnique({
-    where: { id: matchId }
+    where: { id: matchId },
+    include: { season: true }
   });
   if (!match) redirect("/admin?gameError=match");
 
@@ -580,7 +581,14 @@ export async function saveMatchGameResult(formData: FormData) {
     const games = await tx.matchgame.findMany({ where: { matchId } });
     const teamAWins = games.filter((game) => game.winnerId === match.teamAId).length;
     const teamBWins = games.filter((game) => game.winnerId === match.teamBId).length;
-    const finalWinnerId = teamAWins >= 2 ? match.teamAId : teamBWins >= 2 ? match.teamBId : null;
+    const isLeagueStage = match.season.status === "league";
+    const maxWeekInSeason = await tx.match.aggregate({
+      where: { seasonId: match.seasonId },
+      _max: { week: true }
+    });
+    const isGrandFinal = match.season.status === "playoff" && match.week === (maxWeekInSeason._max.week ?? match.week);
+    const targetWins = isLeagueStage ? 2 : isGrandFinal ? 3 : 2;
+    const finalWinnerId = teamAWins >= targetWins ? match.teamAId : teamBWins >= targetWins ? match.teamBId : null;
     const topMvp = getMostFrequent(games.map((game) => game.mvpId).filter(Boolean) as string[]);
 
     await tx.match.update({
