@@ -1,6 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -75,19 +76,23 @@ export async function registerPlayer(formData: FormData) {
   try {
     await prisma.user.create({
       data: {
+        id: randomUUID(),
         name: data.name,
         email: data.email.toLowerCase(),
         password,
         role: "player",
+        updatedAt: new Date(),
         player: {
           create: {
+            id: randomUUID(),
             nickname: data.nickname,
             mlId: data.mlId,
             phone: data.phone,
             unit: data.unit,
             rank: data.rank,
             mainRole: roleToDb[data.mainRole] as never,
-            secondRole: data.secondRole ? (roleToDb[data.secondRole] as never) : undefined
+            secondRole: data.secondRole ? (roleToDb[data.secondRole] as never) : undefined,
+            updatedAt: new Date()
           }
         }
       }
@@ -113,12 +118,15 @@ export async function createManualPlayer(formData: FormData) {
   try {
     await prisma.user.create({
       data: {
+        id: randomUUID(),
         name: data.name,
         email: data.email.toLowerCase(),
         password,
         role: "player",
+        updatedAt: new Date(),
         player: {
           create: {
+            id: randomUUID(),
             nickname: data.nickname,
             mlId: data.mlId,
             phone: data.phone,
@@ -126,7 +134,8 @@ export async function createManualPlayer(formData: FormData) {
             rank: data.rank,
             mainRole: roleToDb[data.mainRole] as never,
             secondRole: data.secondRole ? (roleToDb[data.secondRole] as never) : undefined,
-            verified: data.verified
+            verified: data.verified,
+            updatedAt: new Date()
           }
         }
       }
@@ -163,7 +172,7 @@ export async function createSeason(formData: FormData) {
   const name = String(formData.get("name") || "Season Internal 2026");
 
   await prisma.season.create({
-    data: { name, status: "draft" }
+    data: { id: randomUUID(), name, status: "draft", updatedAt: new Date() }
   });
 
   revalidateAll();
@@ -274,17 +283,20 @@ export async function generateTeamsAction(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { seasonId } });
-    await tx.teamMember.deleteMany({ where: { team: { seasonId } } });
+    await tx.teammember.deleteMany({ where: { team: { seasonId } } });
     await tx.team.deleteMany({ where: { seasonId } });
 
     for (const team of teams) {
       await tx.team.create({
         data: {
+          id: randomUUID(),
           seasonId,
           teamName: team.name,
           power: team.power,
-          members: {
+          updatedAt: new Date(),
+          teammember: {
             create: team.members.map((member) => ({
+              id: randomUUID(),
               playerId: member.player.id,
               laneRole: roleToDb[member.laneRole] as never
             }))
@@ -310,7 +322,7 @@ export async function resetTeamsAction(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { seasonId } });
-    await tx.teamMember.deleteMany({ where: { team: { seasonId } } });
+    await tx.teammember.deleteMany({ where: { team: { seasonId } } });
     await tx.team.deleteMany({ where: { seasonId } });
     await tx.season.update({
       where: { id: seasonId },
@@ -364,7 +376,7 @@ export async function saveWheelDraftTeams(formData: FormData) {
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { seasonId: data.seasonId } });
-    await tx.teamMember.deleteMany({ where: { team: { seasonId: data.seasonId } } });
+    await tx.teammember.deleteMany({ where: { team: { seasonId: data.seasonId } } });
     await tx.team.deleteMany({ where: { seasonId: data.seasonId } });
 
     for (const team of data.teams) {
@@ -375,11 +387,14 @@ export async function saveWheelDraftTeams(formData: FormData) {
 
       await tx.team.create({
         data: {
+          id: randomUUID(),
           seasonId: data.seasonId,
           teamName: team.name,
           power,
-          members: {
+          updatedAt: new Date(),
+          teammember: {
             create: team.members.map((member) => ({
+              id: randomUUID(),
               playerId: member.playerId,
               laneRole: roleToDb[member.laneRole] as never
             }))
@@ -405,7 +420,7 @@ export async function generateScheduleAction(formData: FormData) {
   const dbTeams = await prisma.team.findMany({
     where: { seasonId },
     include: {
-      members: {
+      teammember: {
         include: {
           player: {
             include: { user: true }
@@ -420,7 +435,7 @@ export async function generateScheduleAction(formData: FormData) {
     id: team.id,
     name: team.teamName,
     power: team.power,
-    members: team.members.map((member) => ({
+    members: team.teammember.map((member) => ({
       laneRole: roleFromDb[member.laneRole],
       player: {
         id: member.player.id,
@@ -443,10 +458,12 @@ export async function generateScheduleAction(formData: FormData) {
     await tx.match.deleteMany({ where: { seasonId } });
     await tx.match.createMany({
       data: schedule.map((match) => ({
+        id: randomUUID(),
         seasonId,
         week: match.week,
         teamAId: match.teamAId,
-        teamBId: match.teamBId
+        teamBId: match.teamBId,
+        updatedAt: new Date()
       }))
     });
     await tx.season.update({
@@ -505,8 +522,7 @@ export async function saveMatchGameResult(formData: FormData) {
   }
 
   const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: { games: true }
+    where: { id: matchId }
   });
   if (!match) redirect("/admin?gameError=match");
 
@@ -516,7 +532,7 @@ export async function saveMatchGameResult(formData: FormData) {
   const screenshotUrl = (await saveScreenshotFile(screenshotFile, matchId, gameNumber)) || screenshotUrlInput || undefined;
 
   await prisma.$transaction(async (tx) => {
-    await tx.matchGame.upsert({
+    await tx.matchgame.upsert({
       where: {
         matchId_gameNumber: {
           matchId,
@@ -532,6 +548,7 @@ export async function saveMatchGameResult(formData: FormData) {
         ...(screenshotUrl ? { screenshotUrl } : {})
       },
       create: {
+        id: randomUUID(),
         matchId,
         gameNumber,
         winnerId,
@@ -539,11 +556,12 @@ export async function saveMatchGameResult(formData: FormData) {
         mvpKills,
         mvpDeaths,
         mvpAssists,
-        screenshotUrl
+        screenshotUrl,
+        updatedAt: new Date()
       }
     });
 
-    const games = await tx.matchGame.findMany({ where: { matchId } });
+    const games = await tx.matchgame.findMany({ where: { matchId } });
     const teamAWins = games.filter((game) => game.winnerId === match.teamAId).length;
     const teamBWins = games.filter((game) => game.winnerId === match.teamBId).length;
     const finalWinnerId = teamAWins >= 2 ? match.teamAId : teamBWins >= 2 ? match.teamBId : null;
@@ -639,7 +657,7 @@ async function saveScreenshotFile(file: FormDataEntryValue | null, matchId: stri
 async function refreshTeamPowers() {
   const teams = await prisma.team.findMany({
     include: {
-      members: {
+      teammember: {
         include: {
           player: true
         }
@@ -652,7 +670,7 @@ async function refreshTeamPowers() {
       prisma.team.update({
         where: { id: team.id },
         data: {
-          power: team.members.reduce((total, member) => total + rankPower[member.player.rank], 0)
+          power: team.teammember.reduce((total, member) => total + rankPower[member.player.rank], 0)
         }
       })
     )
