@@ -304,7 +304,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <CardContent className="space-y-5">
             {params?.gameSaved && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                Detail game BO3 berhasil disimpan.
+                Detail game berhasil disimpan (BO2/BO3/BO5 sesuai fase).
               </p>
             )}
             {params?.gameError && (
@@ -343,7 +343,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <form action={saveMatchGameResult} className="space-y-4 rounded-md border border-border bg-white p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm font-semibold">
-                  Match BO3
+                  Match Series
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
                     {matches.filter((match) => !match.winnerId).map((match) => (
                       <option key={match.id} value={match.id}>
@@ -355,7 +355,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <label className="block text-sm font-semibold">
                   Game
                   <select name="gameNumber" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                    {[1, 2, 3].map((game) => (
+                    {[1, 2, 3, 4, 5].map((game) => (
                       <option key={game} value={game}>Game {game}</option>
                     ))}
                   </select>
@@ -398,7 +398,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 URL Screenshot Opsional
                 <input name="screenshotUrl" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" placeholder="Isi kalau screenshot sudah di-upload di tempat lain" />
               </label>
-              <ActionSubmitButton className="w-full" label="Simpan Detail Game BO3" pendingLabel="Menyimpan detail game..." />
+              <ActionSubmitButton className="w-full" label="Simpan Detail Game Series" pendingLabel="Menyimpan detail game..." />
             </form>
 
             {pendingMatch?.games?.length ? (

@@ -43,7 +43,7 @@ export default async function StandingsPage() {
         )}
       </Card>
 
-      <SectionTitle title="Pemain Terbaik" description="Dihitung dari jumlah MVP game dan KDA MVP selama BO3." />
+      <SectionTitle title="Pemain Terbaik" description="Dihitung dari jumlah MVP game dan KDA MVP selama series penyisihan & playoff." />
       <Card className="overflow-hidden">
         <div className="grid grid-cols-[52px_1fr_72px_72px_72px_72px_72px] gap-2 border-b border-border bg-muted px-4 py-3 text-xs font-bold text-muted-foreground">
           <span>#</span>
@@ -73,7 +73,7 @@ export default async function StandingsPage() {
         ))}
         {!playerStandings.length && (
           <div className="px-4 py-5 text-sm text-muted-foreground">
-            Statistik pemain belum tersedia. Isi detail game BO3 dari panel admin.
+            Statistik pemain belum tersedia. Isi detail game series dari panel admin.
           </div>
         )}
       </Card>
