@@ -57,20 +57,18 @@ export default async function TeamsPage({ searchParams }: TeamsPageProps) {
                     {isAdmin && (
                       <form action={moveTeamMemberAction} className="col-span-3 mt-2 grid gap-2 rounded-md border border-border bg-white p-2 md:grid-cols-[1fr_1fr_auto]">
                         <input type="hidden" name="sourceTeamId" value={team.id} />
-                        <input type="hidden" name="playerId" value={member.player.id} />
-                        <select name="targetTeamId" defaultValue={team.id} className="h-9 rounded-md border border-border bg-white px-2 text-sm">
-                          {teams.map((targetTeam) => (
-                            <option key={targetTeam.id} value={targetTeam.id}>
-                              {targetTeam.name}
-                            </option>
-                          ))}
-                        </select>
-                        <select name="targetRole" defaultValue={member.laneRole} className="h-9 rounded-md border border-border bg-white px-2 text-sm">
-                          {ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {role}
-                            </option>
-                          ))}
+                        <input type="hidden" name="sourcePlayerId" value={member.player.id} />
+                        <select name="targetPlayerId" className="h-9 rounded-md border border-border bg-white px-2 text-sm md:col-span-2">
+                          <option value="">Pilih pemain penukar</option>
+                          {teams
+                            .filter((targetTeam) => targetTeam.id !== team.id)
+                            .flatMap((targetTeam) =>
+                              targetTeam.members.map((targetMember) => (
+                                <option key={targetMember.player.id} value={targetMember.player.id}>
+                                  {targetTeam.name} - {targetMember.laneRole} - {targetMember.player.nickname}
+                                </option>
+                              ))
+                            )}
                         </select>
                         <Button type="submit" variant="secondary" className="h-9">
                           Pindah

@@ -633,58 +633,41 @@ export async function moveTeamMemberAction(formData: FormData) {
   await assertAdmin();
 
   const sourceTeamId = String(formData.get("sourceTeamId") ?? "");
-  const playerId = String(formData.get("playerId") ?? "");
-  const targetTeamId = String(formData.get("targetTeamId") ?? "");
-  const targetRole = String(formData.get("targetRole") ?? "") as keyof typeof roleToDb;
+  const sourcePlayerId = String(formData.get("sourcePlayerId") ?? "");
+  const targetPlayerId = String(formData.get("targetPlayerId") ?? "");
 
-  if (!sourceTeamId || !playerId || !targetTeamId || !(targetRole in roleToDb)) {
+  if (!sourceTeamId || !sourcePlayerId || !targetPlayerId || sourcePlayerId === targetPlayerId) {
     redirect("/teams?moveError=invalid");
   }
 
-  const targetRoleDb = roleToDb[targetRole];
-
   await prisma.$transaction(async (tx) => {
     const sourceMember = await tx.teammember.findUnique({
-      where: { teamId_playerId: { teamId: sourceTeamId, playerId } }
+      where: { teamId_playerId: { teamId: sourceTeamId, playerId: sourcePlayerId } }
     });
     if (!sourceMember) redirect("/teams?moveError=source-not-found");
 
-    const targetOccupant = await tx.teammember.findUnique({
-      where: { teamId_laneRole: { teamId: targetTeamId, laneRole: targetRoleDb as never } }
+    const targetMember = await tx.teammember.findFirst({
+      where: { playerId: targetPlayerId }
     });
+    if (!targetMember) redirect("/teams?moveError=target-not-found");
+    if (targetMember.teamId === sourceTeamId) redirect("/teams?moveError=same-team");
 
-    if (targetOccupant && !(targetOccupant.teamId === sourceTeamId && targetOccupant.playerId === playerId)) {
-      await tx.$executeRawUnsafe(
-        `
-          UPDATE teammember
-          SET
-            teamId = CASE
-              WHEN id = ? THEN ?
-              WHEN id = ? THEN ?
-            END,
-            laneRole = CASE
-              WHEN id = ? THEN ?
-              WHEN id = ? THEN ?
-            END
-          WHERE id IN (?, ?)
-        `,
-        sourceMember.id,
-        targetTeamId,
-        targetOccupant.id,
-        sourceTeamId,
-        sourceMember.id,
-        targetRoleDb,
-        targetOccupant.id,
-        sourceMember.laneRole,
-        sourceMember.id,
-        targetOccupant.id
-      );
-    } else {
-      await tx.teammember.update({
-        where: { teamId_playerId: { teamId: sourceTeamId, playerId } },
-        data: { teamId: targetTeamId, laneRole: targetRoleDb as never }
-      });
-    }
+    await tx.$executeRawUnsafe(
+      `
+        UPDATE teammember
+        SET teamId = CASE
+          WHEN id = ? THEN ?
+          WHEN id = ? THEN ?
+        END
+        WHERE id IN (?, ?)
+      `,
+      sourceMember.id,
+      targetMember.teamId,
+      targetMember.id,
+      sourceTeamId,
+      sourceMember.id,
+      targetMember.id
+    );
   });
 
   await refreshTeamPowers();
