@@ -653,15 +653,36 @@ export async function moveTeamMemberAction(formData: FormData) {
       where: { teamId_laneRole: { teamId: targetTeamId, laneRole: targetRoleDb as never } }
     });
 
-    await tx.teammember.update({
-      where: { teamId_playerId: { teamId: sourceTeamId, playerId } },
-      data: { teamId: targetTeamId, laneRole: targetRoleDb as never }
-    });
-
     if (targetOccupant && !(targetOccupant.teamId === sourceTeamId && targetOccupant.playerId === playerId)) {
+      await tx.$executeRawUnsafe(
+        `
+          UPDATE teammember
+          SET
+            teamId = CASE
+              WHEN id = ? THEN ?
+              WHEN id = ? THEN ?
+            END,
+            laneRole = CASE
+              WHEN id = ? THEN ?
+              WHEN id = ? THEN ?
+            END
+          WHERE id IN (?, ?)
+        `,
+        sourceMember.id,
+        targetTeamId,
+        targetOccupant.id,
+        sourceTeamId,
+        sourceMember.id,
+        targetRoleDb,
+        targetOccupant.id,
+        sourceMember.laneRole,
+        sourceMember.id,
+        targetOccupant.id
+      );
+    } else {
       await tx.teammember.update({
-        where: { id: targetOccupant.id },
-        data: { teamId: sourceTeamId, laneRole: sourceMember.laneRole }
+        where: { teamId_playerId: { teamId: sourceTeamId, playerId } },
+        data: { teamId: targetTeamId, laneRole: targetRoleDb as never }
       });
     }
   });
