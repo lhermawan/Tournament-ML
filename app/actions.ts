@@ -629,6 +629,49 @@ export async function saveMatchResult(formData: FormData) {
   redirect("/admin?notice=match-saved");
 }
 
+export async function moveTeamMemberAction(formData: FormData) {
+  await assertAdmin();
+
+  const sourceTeamId = String(formData.get("sourceTeamId") ?? "");
+  const playerId = String(formData.get("playerId") ?? "");
+  const targetTeamId = String(formData.get("targetTeamId") ?? "");
+  const targetRole = String(formData.get("targetRole") ?? "") as keyof typeof roleToDb;
+
+  if (!sourceTeamId || !playerId || !targetTeamId || !(targetRole in roleToDb)) {
+    redirect("/teams?moveError=invalid");
+  }
+
+  const targetRoleDb = roleToDb[targetRole];
+
+  await prisma.$transaction(async (tx) => {
+    const sourceMember = await tx.teammember.findUnique({
+      where: { teamId_playerId: { teamId: sourceTeamId, playerId } }
+    });
+    if (!sourceMember) redirect("/teams?moveError=source-not-found");
+
+    const targetOccupant = await tx.teammember.findUnique({
+      where: { teamId_laneRole: { teamId: targetTeamId, laneRole: targetRoleDb as never } }
+    });
+
+    await tx.teammember.update({
+      where: { teamId_playerId: { teamId: sourceTeamId, playerId } },
+      data: { teamId: targetTeamId, laneRole: targetRoleDb as never }
+    });
+
+    if (targetOccupant && !(targetOccupant.teamId === sourceTeamId && targetOccupant.playerId === playerId)) {
+      await tx.teammember.update({
+        where: { id: targetOccupant.id },
+        data: { teamId: sourceTeamId, laneRole: sourceMember.laneRole }
+      });
+    }
+  });
+
+  await refreshTeamPowers();
+  revalidateAll();
+  revalidatePath("/teams");
+  redirect("/teams?moveSaved=1");
+}
+
 async function assertAdmin() {
   if (!(await isAdmin())) {
     redirect("/login?error=admin");
