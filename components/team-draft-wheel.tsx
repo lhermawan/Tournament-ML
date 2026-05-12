@@ -49,6 +49,7 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
   const [settling, setSettling] = useState(false);
   const [spinMode, setSpinMode] = useState<"manual" | "auto">("manual");
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [lastWinner, setLastWinner] = useState<Player | null>(null);
   const [lastWinnerTeam, setLastWinnerTeam] = useState("");
   const [localError, setLocalError] = useState("");
@@ -176,7 +177,41 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
     settlingRef.current = false;
     setLastWinner(null);
     setLastWinnerTeam("");
+    setSelectedPlayerId("");
     setLocalError("");
+  }
+
+  function assignManualPick() {
+    if (spinning || settling || !currentTeam || !currentRole || !candidates.length) return;
+    if (!selectedPlayerId) {
+      setLocalError("Pilih pemain dulu untuk input manual.");
+      return;
+    }
+
+    const manualPlayer = candidates.find((player) => player.id === selectedPlayerId);
+    if (!manualPlayer) {
+      setLocalError("Pemain tidak tersedia di pool role saat ini.");
+      return;
+    }
+
+    setLocalError("");
+    setTeams((current) =>
+      current.map((team, index) =>
+        index === teamIndex
+          ? { ...team, members: [...team.members, { player: manualPlayer, laneRole: currentRole }] }
+          : team
+      )
+    );
+    setLastWinner(manualPlayer);
+    setLastWinnerTeam(currentTeam.name);
+    setSelectedPlayerId("");
+
+    if (roleIndex < ROLES.length - 1) {
+      setRoleIndex((current) => current + 1);
+    } else {
+      setRoleIndex(0);
+      setTeamIndex((current) => Math.min(current + 1, teams.length - 1));
+    }
   }
 
   function clearTimers() {
@@ -355,6 +390,32 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
               <Button type="button" variant="secondary" onClick={resetDraft} disabled={spinning || settling}>
                 <RotateCcw className="h-4 w-4" />
               </Button>
+              </div>
+              <div className="grid gap-2 rounded-md border border-border bg-white p-3">
+                <p className="text-xs font-black uppercase text-muted-foreground">Input Manual Admin</p>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <select
+                    value={selectedPlayerId}
+                    onChange={(event) => setSelectedPlayerId(event.target.value)}
+                    className="h-10 rounded-md border border-border bg-white px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/30"
+                    disabled={spinning || settling || isComplete || !candidates.length}
+                  >
+                    <option value="">Pilih pemain dari pool {currentRole}</option>
+                    {candidates.map((player) => (
+                      <option key={player.id} value={player.id}>
+                        {player.nickname} • {player.rank}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={assignManualPick}
+                    disabled={spinning || settling || isComplete || !selectedPlayerId || !candidates.length}
+                  >
+                    Input Manual
+                  </Button>
+                </div>
               </div>
               <button
                 type="button"
