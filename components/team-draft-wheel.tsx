@@ -28,6 +28,7 @@ type TeamDraftWheelProps = {
 
 const wheelColors = ["#0f766e", "#f59e0b", "#2563eb", "#dc2626", "#7c3aed", "#16a34a", "#ea580c", "#0891b2"];
 const fallbackTeamNames = ["Team Aster", "Team Bravo", "Team Cakra", "Team Daya", "Team Elang", "Team Fortuna"];
+const injectedTeamDefaults = ["MACTEL", "DISBUDPORA"];
 
 export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, draftError }: TeamDraftWheelProps) {
   const verifiedPlayers = useMemo(() => players.filter((player) => player.verified), [players]);
@@ -50,6 +51,7 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
   const [spinMode, setSpinMode] = useState<"manual" | "auto">("manual");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [injectedTeams, setInjectedTeams] = useState(injectedTeamDefaults);
   const [lastWinner, setLastWinner] = useState<Player | null>(null);
   const [lastWinnerTeam, setLastWinnerTeam] = useState("");
   const [localError, setLocalError] = useState("");
@@ -93,6 +95,10 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
 
   function updateTeamName(index: number, name: string) {
     setTeams((current) => current.map((team, teamPosition) => (teamPosition === index ? { ...team, name } : team)));
+  }
+
+  function updateInjectedTeamName(index: number, name: string) {
+    setInjectedTeams((current) => current.map((team, position) => (position === index ? name : team)));
   }
 
   function spin() {
@@ -214,6 +220,39 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
     }
   }
 
+  function assignManualPick() {
+    if (spinning || settling || !currentTeam || !currentRole || !candidates.length) return;
+    if (!selectedPlayerId) {
+      setLocalError("Pilih pemain dulu untuk input manual.");
+      return;
+    }
+
+    const manualPlayer = candidates.find((player) => player.id === selectedPlayerId);
+    if (!manualPlayer) {
+      setLocalError("Pemain tidak tersedia di pool role saat ini.");
+      return;
+    }
+
+    setLocalError("");
+    setTeams((current) =>
+      current.map((team, index) =>
+        index === teamIndex
+          ? { ...team, members: [...team.members, { player: manualPlayer, laneRole: currentRole }] }
+          : team
+      )
+    );
+    setLastWinner(manualPlayer);
+    setLastWinnerTeam(currentTeam.name);
+    setSelectedPlayerId("");
+
+    if (roleIndex < ROLES.length - 1) {
+      setRoleIndex((current) => current + 1);
+    } else {
+      setRoleIndex(0);
+      setTeamIndex((current) => Math.min(current + 1, teams.length - 1));
+    }
+  }
+
   function clearTimers() {
     clearSpinTimers();
     if (settleTimeoutRef.current !== null) {
@@ -288,6 +327,7 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
         }))
       )
     );
+    formData.set("injectedTeams", JSON.stringify(injectedTeams.map((name) => name.trim()).filter(Boolean)));
 
     startTransition(() => {
       saveWheelDraftTeams(formData);
@@ -490,6 +530,21 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
           <Save className="h-4 w-4" />
           {isPending ? "Menyimpan" : "Simpan Hasil Draft"}
         </Button>
+      </div>
+      <div className="rounded-lg border border-border bg-white p-4">
+        <p className="text-sm font-black">Team Inject Database (bisa diubah)</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {injectedTeams.map((teamName, index) => (
+            <label key={index} className="text-xs font-bold uppercase text-muted-foreground">
+              Team Tambahan {index + 1}
+              <input
+                value={teamName}
+                onChange={(event) => updateInjectedTeamName(index, event.target.value)}
+                className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm font-black outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </label>
+          ))}
+        </div>
       </div>
     </div>
   );

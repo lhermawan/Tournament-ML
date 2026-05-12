@@ -61,7 +61,8 @@ const wheelDraftSchema = z.object({
         })
       ).length(5)
     })
-  ).min(2)
+  ).min(2),
+  injectedTeams: z.array(z.string().min(2)).length(2).optional()
 });
 
 export async function registerPlayer(formData: FormData) {
@@ -338,9 +339,11 @@ export async function saveWheelDraftTeams(formData: FormData) {
   await assertAdmin();
 
   const rawTeams = String(formData.get("teams") ?? "");
+  const rawInjectedTeams = String(formData.get("injectedTeams") ?? "[]");
   const seasonId = String(formData.get("seasonId") ?? "");
   const parsedJson = safeJsonParse(rawTeams);
-  const payload = wheelDraftSchema.safeParse({ seasonId, teams: parsedJson });
+  const parsedInjectedTeams = safeJsonParse(rawInjectedTeams);
+  const payload = wheelDraftSchema.safeParse({ seasonId, teams: parsedJson, injectedTeams: parsedInjectedTeams });
 
   if (!payload.success) {
     redirect("/admin?draftError=invalid");
@@ -399,6 +402,19 @@ export async function saveWheelDraftTeams(formData: FormData) {
               laneRole: roleToDb[member.laneRole] as never
             }))
           }
+        }
+      });
+    }
+
+    const extraTeams = (data.injectedTeams ?? ["MACTEL", "DISBUDPORA"]).slice(0, 2);
+    for (const teamName of extraTeams) {
+      await tx.team.create({
+        data: {
+          id: randomUUID(),
+          seasonId: data.seasonId,
+          teamName,
+          power: 0,
+          updatedAt: new Date()
         }
       });
     }
