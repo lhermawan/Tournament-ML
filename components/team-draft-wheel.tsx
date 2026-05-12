@@ -220,6 +220,39 @@ export function TeamDraftWheel({ seasonId, players, existingTeams, draftSaved, d
     }
   }
 
+  function assignManualPick() {
+    if (spinning || settling || !currentTeam || !currentRole || !candidates.length) return;
+    if (!selectedPlayerId) {
+      setLocalError("Pilih pemain dulu untuk input manual.");
+      return;
+    }
+
+    const manualPlayer = candidates.find((player) => player.id === selectedPlayerId);
+    if (!manualPlayer) {
+      setLocalError("Pemain tidak tersedia di pool role saat ini.");
+      return;
+    }
+
+    setLocalError("");
+    setTeams((current) =>
+      current.map((team, index) =>
+        index === teamIndex
+          ? { ...team, members: [...team.members, { player: manualPlayer, laneRole: currentRole }] }
+          : team
+      )
+    );
+    setLastWinner(manualPlayer);
+    setLastWinnerTeam(currentTeam.name);
+    setSelectedPlayerId("");
+
+    if (roleIndex < ROLES.length - 1) {
+      setRoleIndex((current) => current + 1);
+    } else {
+      setRoleIndex(0);
+      setTeamIndex((current) => Math.min(current + 1, teams.length - 1));
+    }
+  }
+
   function clearTimers() {
     clearSpinTimers();
     if (settleTimeoutRef.current !== null) {
