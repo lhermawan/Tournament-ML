@@ -22,8 +22,8 @@ model match {
   updatedAt                 DateTime
   player                    player?     @relation(fields: [mvpId], references: [id], map: "Match_mvpId_fkey")
   season                    season      @relation(fields: [seasonId], references: [id], onDelete: Cascade, map: "Match_seasonId_fkey")
-  team_match_teamAIdToteam  team        @relation("match_teamAIdToteam", fields: [teamAId], references: [id], onDelete: NoAction, map: "Match_teamAId_fkey")
-  team_match_teamBIdToteam  team        @relation("match_teamBIdToteam", fields: [teamBId], references: [id], onDelete: NoAction, map: "Match_teamBId_fkey")
+  team_match_teamAIdToteam  team        @relation("match_teamAIdToteam", fields: [teamAId], references: [id], map: "Match_teamAId_fkey")
+  team_match_teamBIdToteam  team        @relation("match_teamBIdToteam", fields: [teamBId], references: [id], map: "Match_teamBId_fkey")
   team_match_winnerIdToteam team?       @relation("match_winnerIdToteam", fields: [winnerId], references: [id], map: "Match_winnerId_fkey")
   matchgame                 matchgame[]
 
