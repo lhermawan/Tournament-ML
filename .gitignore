@@ -5,3 +5,10 @@ out
 .env.local
 .env.*.local
 npm-debug.log*
+
+# Added by DevSecOps Git Guardian
+*.key
+*.pem
+.ssh
+.credentials
+secrets.json
