@@ -12,3 +12,6 @@ npm-debug.log*
 .ssh
 .credentials
 secrets.json
+
+.project-security
+security-reports/
