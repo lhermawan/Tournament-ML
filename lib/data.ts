@@ -107,7 +107,7 @@ export async function getLeagueData() {
         status: season.status as SeasonStatus
       },
       players: mappedPlayers,
-      teams,
+      teams,  
       matches,
       standings: calculateStandings(teams, matches),
       playerStandings: calculatePlayerStandings(mappedPlayers, teams, matches)
