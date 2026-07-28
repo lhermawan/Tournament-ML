@@ -57,7 +57,7 @@ docker compose up --build
 
 Akses layanan:
 
-- App: `http://localhost:${APP_PORT:-4000}`
+- App: `http://localhost:${APP_PORT:-5000}`
 - MySQL: `localhost:${MYSQL_PORT:-3306}`
 
 Default kredensial MySQL di compose:
@@ -76,7 +76,7 @@ MYSQL_DATABASE=ml_dleague
 Kalau di Docker kamu sudah ada aplikasi lain (port bentrok), ganti port host di `.env`:
 
 ```env
-APP_PORT=4010
+APP_PORT=5010
 MYSQL_PORT=3307
 MYSQL_ROOT_PASSWORD=PasswordKamu
 MYSQL_DATABASE=ml_dleague
@@ -98,6 +98,17 @@ docker compose up --build
 docker compose down -v
 docker compose up --build
 ```
+
+
+## Deploy di Subpath
+
+Jika aplikasi dipasang di reverse proxy dengan prefix path, misalnya `http://host/mobile`, set base path saat build dan runtime:
+
+```env
+NEXT_PUBLIC_BASE_PATH=/mobile
+```
+
+Tanpa konfigurasi ini, Next.js dapat mencoba mengambil chunk JavaScript dari path yang salah dan memunculkan error seperti `Loading chunk ... failed` saat halaman login atau halaman lain dibuka dari `/mobile`.
 
 ## Setup Database
 

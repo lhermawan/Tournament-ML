@@ -31,7 +31,7 @@ services:
       DATABASE_URL: mysql://root:Diskominfo2026@db:3306/ml_dleague
       NODE_ENV: development
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-5000}:5000"
     volumes:
       - ./:/app
       - /app/node_modules
