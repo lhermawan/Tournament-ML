@@ -6,18 +6,18 @@ import { getLeagueData } from "@/lib/data";
 
 export default async function SchedulePage() {
   const { matches } = await getLeagueData();
-  const weeks = [...new Set(matches.map((match) => match.week))].sort((a, b) => a - b);
+  const days = [...new Set(matches.map((match) => match.week))].sort((a, b) => a - b);
 
   return (
     <AppShell>
       <SectionTitle title="Jadwal Match" description="Round robin satu kali pertemuan untuk semua tim." />
       <div className="space-y-5">
-        {weeks.map((week) => (
-          <section key={week}>
-            <h2 className="mb-3 text-lg font-black">Week {week}</h2>
+        {days.map((day) => (
+          <section key={day}>
+            <h2 className="mb-3 text-lg font-black">Day {day}</h2>
             <div className="grid gap-3 md:grid-cols-2">
               {matches
-                .filter((match) => match.week === week)
+                .filter((match) => match.week === day)
                 .map((match) => (
                   <Card key={match.id} className="p-4">
                     <div className="flex items-center justify-between gap-4">
@@ -41,7 +41,7 @@ export default async function SchedulePage() {
             </div>
           </section>
         ))}
-        {!weeks.length && (
+        {!days.length && (
           <Card className="p-5">
             <p className="text-sm text-muted-foreground">Jadwal belum dibuat. Admin perlu generate jadwal setelah tim tersedia.</p>
           </Card>

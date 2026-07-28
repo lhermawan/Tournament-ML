@@ -110,19 +110,19 @@ export function generateBalancedTeams(players: Player[], attempts = 150): Team[]
 
 export function generateRoundRobin(teams: Team[]): Match[] {
   const schedule: Match[] = [];
-  let week = 1;
+  let matchNumber = 0;
 
   for (let i = 0; i < teams.length; i += 1) {
     for (let j = i + 1; j < teams.length; j += 1) {
+      matchNumber += 1;
       schedule.push({
         id: `match-${i + 1}-${j + 1}`,
-        week,
+        week: Math.ceil(matchNumber / 2),
         teamAId: teams[i].id,
         teamBId: teams[j].id,
         teamAName: teams[i].name,
         teamBName: teams[j].name
       });
-      week = week === Math.max(1, teams.length - 1) ? 1 : week + 1;
     }
   }
 

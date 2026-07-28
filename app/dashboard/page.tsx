@@ -50,7 +50,7 @@ export default async function PlayerDashboardPage() {
           <CardContent className="space-y-3">
             {playerMatches.map((match) => (
               <div key={match.id} className="grid grid-cols-[70px_1fr_auto] items-center gap-3 rounded-md bg-muted p-3">
-                <Badge>W{match.week}</Badge>
+                <Badge>D{match.week}</Badge>
                 <p className="text-sm font-bold">
                   {match.teamAName} vs {match.teamBName}
                 </p>
