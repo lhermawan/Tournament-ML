@@ -1,14 +1,17 @@
-import { CalendarPlus, CheckCircle2, FileUp, Lock, Pencil, Play, RotateCcw, Save, Shuffle, Trophy, UserCheck, UserPlus } from "lucide-react";
+import { CalendarPlus, CheckCircle2, FileUp, Lock, Pencil, Play, RotateCcw, Save, Shuffle, Trash2, Trophy, UserCheck, UserPlus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   createManualPlayer,
   createSeason,
+  deletePlayer,
+  deleteTeam,
   generateScheduleAction,
   generateTeamsAction,
   resetTeamsAction,
   saveMatchGameResult,
   saveMatchResult,
   setSeasonStatus,
+  updateMatchSchedule,
   updatePlayer,
   updateLiveScore,
   verifyAllPlayers,
@@ -38,6 +41,8 @@ type AdminPageProps = {
     gameSaved?: string;
     teamsReset?: string;
     notice?: string;
+    deleteError?: string;
+    scheduleError?: string;
   }>;
 };
 
@@ -77,6 +82,21 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
           {params.notice === "player-verified" && "Peserta berhasil diverifikasi."}
           {params.notice === "match-saved" && "Hasil match berhasil disimpan."}
+          {params.notice === "player-deleted" && "Peserta berhasil dihapus."}
+          {params.notice === "team-deleted" && "Team dan jadwal terkait berhasil dihapus."}
+          {params.notice === "schedule-updated" && "Jadwal match berhasil diperbarui."}
+        </p>
+      )}
+
+      {params?.deleteError && (
+        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Data tidak bisa dihapus. Pastikan item masih tersedia dan coba lagi.
+        </p>
+      )}
+
+      {params?.scheduleError && (
+        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Jadwal tidak bisa diperbarui. Week harus minimal 1 dan team A/B tidak boleh sama.
         </p>
       )}
 
@@ -290,6 +310,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     Simpan Perubahan
                   </Button>
                 </form>
+                <form action={deletePlayer} className="mt-3 flex justify-end">
+                  <input name="playerId" type="hidden" value={player.id} />
+                  <Button type="submit" variant="destructive" className="h-9">
+                    <Trash2 className="h-4 w-4" />
+                    Hapus Peserta
+                  </Button>
+                </form>
               </details>
             ))}
             {!players.length && <p className="text-sm text-muted-foreground">Belum ada peserta terdaftar.</p>}
@@ -302,6 +329,43 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <p className="mt-1 text-sm text-muted-foreground">Update skor live untuk overlay, lalu simpan hasil final setelah match selesai.</p>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="space-y-3 rounded-md border border-border bg-muted p-4">
+              <div>
+                <p className="text-sm font-black">Atur Jadwal Manual</p>
+                <p className="text-xs text-muted-foreground">Admin bisa mengganti week dan pasangan team untuk setiap match.</p>
+              </div>
+              {matches.map((match) => (
+                <form key={match.id} action={updateMatchSchedule} className="grid gap-3 rounded-md bg-white p-3 md:grid-cols-[80px_1fr_1fr_auto]">
+                  <input name="matchId" type="hidden" value={match.id} />
+                  <label className="block text-xs font-semibold">
+                    Week
+                    <input name="week" type="number" min="1" defaultValue={match.week} className="mt-1 h-9 w-full rounded-md border border-border px-2 text-sm" />
+                  </label>
+                  <label className="block text-xs font-semibold">
+                    Team A
+                    <select name="teamAId" defaultValue={match.teamAId} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                      {teams.map((team) => (
+                        <option key={team.id} value={team.id}>{team.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-semibold">
+                    Team B
+                    <select name="teamBId" defaultValue={match.teamBId} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                      {teams.map((team) => (
+                        <option key={team.id} value={team.id}>{team.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button type="submit" variant="secondary" className="self-end h-9">
+                    <Save className="h-4 w-4" />
+                    Simpan
+                  </Button>
+                </form>
+              ))}
+              {!matches.length && <p className="text-xs text-muted-foreground">Belum ada jadwal. Generate jadwal dulu setelah team tersedia.</p>}
+            </div>
+
             {params?.gameSaved && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
                 Detail game berhasil disimpan (BO2/BO3/BO5 sesuai fase).
@@ -471,9 +535,19 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             {teams.map((team) => (
-              <div key={team.id} className="flex items-center justify-between rounded-md bg-muted p-3">
+              <div key={team.id} className="flex items-center justify-between gap-3 rounded-md bg-muted p-3">
                 <p className="text-sm font-bold">{team.name}</p>
-                <Badge tone="primary">Power {team.power}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge tone="primary">Power {team.power}</Badge>
+                  <form action={deleteTeam}>
+                    <input name="teamId" type="hidden" value={team.id} />
+                    <input name="seasonId" type="hidden" value={season?.id ?? ""} />
+                    <Button type="submit" variant="destructive" className="h-8 px-2">
+                      <Trash2 className="h-4 w-4" />
+                      Hapus
+                    </Button>
+                  </form>
+                </div>
               </div>
             ))}
             {!teams.length && <p className="text-sm text-muted-foreground">Tim belum digenerate.</p>}
