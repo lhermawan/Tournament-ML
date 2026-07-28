@@ -145,6 +145,7 @@ Lihat [.env.example](.env.example).
 - `/schedule`
 - `/standings`
 - `/admin`
+- `/overlay/vmix` overlay browser source untuk vMix (livescore, jadwal, MVP, klasemen)
 
 ## Core Logic
 
