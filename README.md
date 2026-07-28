@@ -57,7 +57,7 @@ docker compose up --build
 
 Akses layanan:
 
-- App: `http://localhost:${APP_PORT:-4000}`
+- App: `http://localhost:${APP_PORT:-5000}`
 - MySQL: `localhost:${MYSQL_PORT:-3306}`
 
 Default kredensial MySQL di compose:
@@ -76,7 +76,7 @@ MYSQL_DATABASE=ml_dleague
 Kalau di Docker kamu sudah ada aplikasi lain (port bentrok), ganti port host di `.env`:
 
 ```env
-APP_PORT=4010
+APP_PORT=5010
 MYSQL_PORT=3307
 MYSQL_ROOT_PASSWORD=PasswordKamu
 MYSQL_DATABASE=ml_dleague
