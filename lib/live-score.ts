@@ -35,6 +35,15 @@ export async function getLiveScoreData() {
           games: featuredMatch.games ?? []
         }
       : null,
+    upcomingMatches: matches
+      .filter((match) => !match.winnerId)
+      .slice(0, 4)
+      .map((match) => ({
+        id: match.id,
+        week: match.week,
+        teamAName: match.teamAName,
+        teamBName: match.teamBName
+      })),
     standings: standings.slice(0, 4).map((standing, index) => ({
       rank: index + 1,
       teamId: standing.teamId,
