@@ -96,7 +96,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       {params?.scheduleError && (
         <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-          Jadwal tidak bisa diperbarui. Week harus minimal 1 dan team A/B tidak boleh sama.
+          Jadwal tidak bisa diperbarui. Day harus minimal 1 dan team A/B tidak boleh sama.
         </p>
       )}
 
@@ -332,13 +332,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <div className="space-y-3 rounded-md border border-border bg-muted p-4">
               <div>
                 <p className="text-sm font-black">Atur Jadwal Manual</p>
-                <p className="text-xs text-muted-foreground">Admin bisa mengganti week dan pasangan team untuk setiap match.</p>
+                <p className="text-xs text-muted-foreground">Admin bisa mengganti day dan pasangan team untuk setiap match.</p>
               </div>
               {matches.map((match) => (
                 <form key={match.id} action={updateMatchSchedule} className="grid gap-3 rounded-md bg-white p-3 md:grid-cols-[80px_1fr_1fr_auto]">
                   <input name="matchId" type="hidden" value={match.id} />
                   <label className="block text-xs font-semibold">
-                    Week
+                    Day
                     <input name="week" type="number" min="1" defaultValue={match.week} className="mt-1 h-9 w-full rounded-md border border-border px-2 text-sm" />
                   </label>
                   <label className="block text-xs font-semibold">
@@ -382,7 +382,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
                   {matches.filter((match) => !match.winnerId).map((match) => (
                     <option key={match.id} value={match.id}>
-                      Week {match.week}: {match.teamAName} vs {match.teamBName}
+                      Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
                   ))}
                 </select>
@@ -411,7 +411,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
                     {matches.filter((match) => !match.winnerId).map((match) => (
                       <option key={match.id} value={match.id}>
-                        Week {match.week}: {match.teamAName} vs {match.teamBName}
+                        Day {match.week}: {match.teamAName} vs {match.teamBName}
                       </option>
                     ))}
                   </select>
@@ -490,7 +490,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
                   {matches.filter((match) => !match.winnerId).map((match) => (
                     <option key={match.id} value={match.id}>
-                      Week {match.week}: {match.teamAName} vs {match.teamBName}
+                      Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
                   ))}
                 </select>

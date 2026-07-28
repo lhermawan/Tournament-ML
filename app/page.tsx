@@ -85,7 +85,7 @@ export default async function HomePage() {
                   </Badge>
                   <div className="mt-3 flex items-center justify-center gap-2 text-sm font-black text-muted-foreground">
                     <Radio className="h-4 w-4 text-primary" />
-                    Week {liveScore.match.week}
+                    Day {liveScore.match.week}
                   </div>
                   <div className="mt-3 rounded-md bg-amber-100 px-3 py-2">
                     <p className="text-xs font-bold text-amber-800">MVP</p>
@@ -116,7 +116,7 @@ export default async function HomePage() {
           {nextMatches.map((match) => (
             <Card key={match.id} className="p-5">
               <div className="flex items-center justify-between">
-                <Badge>Week {match.week}</Badge>
+                <Badge>Day {match.week}</Badge>
                 <Medal className="h-5 w-5 text-amber-500" />
               </div>
               <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
