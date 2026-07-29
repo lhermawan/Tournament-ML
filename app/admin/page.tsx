@@ -8,6 +8,7 @@ import {
   generateScheduleAction,
   generateTeamsAction,
   resetTeamsAction,
+  resetLiveScore,
   saveMatchGameResult,
   saveMatchResult,
   setSeasonStatus,
@@ -79,6 +80,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "teams-generated" && "Team berhasil digenerate."}
           {params.notice === "schedule-generated" && "Jadwal berhasil digenerate."}
           {params.notice === "live-updated" && "Live score berhasil diupdate."}
+          {params.notice === "live-reset" && "Live score berhasil direset."}
           {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
           {params.notice === "player-verified" && "Peserta berhasil diverifikasi."}
           {params.notice === "match-saved" && "Hasil match berhasil disimpan."}
@@ -401,7 +403,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 MVP Sementara
                 <input name="mvp" list="player-nicknames" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm" placeholder="Nickname MVP sementara" defaultValue={pendingMatch?.mvp ?? ""} />
               </label>
-              <ActionSubmitButton className="w-full" label="Update Live Score" pendingLabel="Mengupdate live score..." />
+              <div className="grid gap-3 md:grid-cols-2">
+                <ActionSubmitButton className="w-full" label="Update Live Score" pendingLabel="Mengupdate live score..." />
+                <Button type="submit" formAction={resetLiveScore} variant="secondary" className="w-full">
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Live Score
+                </Button>
+              </div>
             </form>
 
             <form action={saveMatchGameResult} className="space-y-4 rounded-md border border-border bg-white p-4">

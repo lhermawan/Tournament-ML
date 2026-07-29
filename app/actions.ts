@@ -632,6 +632,33 @@ export async function updateLiveScore(formData: FormData) {
   redirect("/admin?notice=live-updated");
 }
 
+export async function resetLiveScore(formData: FormData) {
+  await assertAdmin();
+
+  const matchId = String(formData.get("matchId") ?? "");
+  if (!matchId) redirect("/admin?error=match-not-found");
+
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) redirect("/admin?error=match-not-found");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.matchgame.deleteMany({ where: { matchId } });
+    await tx.match.update({
+      where: { id: matchId },
+      data: {
+        scoreA: null,
+        scoreB: null,
+        winnerId: null,
+        mvpId: null,
+        screenshotUrl: null
+      }
+    });
+  });
+
+  revalidateAll();
+  redirect("/admin?notice=live-reset");
+}
+
 export async function saveMatchGameResult(formData: FormData) {
   await assertAdmin();
 
