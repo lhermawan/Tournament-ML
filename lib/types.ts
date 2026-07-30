@@ -85,6 +85,9 @@ export type PlayerStanding = {
   name: string;
   teamName?: string;
   mvpCount: number;
+  chocolateCount: number;
+  gamesPlayed: number;
+  bestScore: number;
   kills: number;
   deaths: number;
   assists: number;
