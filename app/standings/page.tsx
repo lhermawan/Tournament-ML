@@ -9,13 +9,14 @@ export default async function StandingsPage() {
 
   return (
     <AppShell>
-      <SectionTitle title="Klasemen" description="Menang 3 poin, kalah 0 poin. Tie break: selisih game." />
+      <SectionTitle title="Klasemen" description="Menang 3 poin, seri 1 poin untuk masing-masing tim, kalah 0 poin. Tie break: selisih game." />
       <Card className="overflow-hidden">
-        <div className="grid grid-cols-[52px_1fr_64px_64px_64px_72px_72px] gap-2 border-b border-border bg-muted px-4 py-3 text-xs font-bold text-muted-foreground">
+        <div className="grid grid-cols-[52px_1fr_56px_56px_56px_56px_72px_72px] gap-2 border-b border-border bg-muted px-4 py-3 text-xs font-bold text-muted-foreground">
           <span>#</span>
           <span>Tim</span>
           <span>Main</span>
           <span>W</span>
+          <span>D</span>
           <span>L</span>
           <span>GD</span>
           <span>Poin</span>
@@ -23,7 +24,7 @@ export default async function StandingsPage() {
         {standings.map((standing, index) => (
           <div
             key={standing.teamId}
-            className="grid grid-cols-[52px_1fr_64px_64px_64px_72px_72px] gap-2 border-b border-border px-4 py-4 text-sm last:border-b-0"
+            className="grid grid-cols-[52px_1fr_56px_56px_56px_56px_72px_72px] gap-2 border-b border-border px-4 py-4 text-sm last:border-b-0"
           >
             <span className="font-black">{index + 1}</span>
             <span className="font-bold">
@@ -31,6 +32,7 @@ export default async function StandingsPage() {
             </span>
             <span>{standing.played}</span>
             <span>{standing.win}</span>
+            <span>{standing.draw}</span>
             <span>{standing.loss}</span>
             <span>{standing.gameDiff}</span>
             <span className="font-black">{standing.points}</span>

@@ -1,4 +1,5 @@
 import { getLeagueData } from "@/lib/data";
+import { isMatchFinished } from "@/lib/tournament";
 
 export async function getLiveScoreData() {
   const { season, matches, playerStandings, standings, teams } = await getLeagueData();
@@ -12,8 +13,8 @@ export async function getLiveScoreData() {
     matchesPerDay.set(match.week, matchNumber);
     matchNumberById.set(match.id, matchNumber);
   });
-  const liveMatch = matches.find((match) => !match.winnerId) ?? null;
-  const lastMatch = [...matches].reverse().find((match) => match.winnerId) ?? null;
+  const liveMatch = matches.find((match) => !isMatchFinished(match)) ?? null;
+  const lastMatch = [...matches].reverse().find((match) => isMatchFinished(match)) ?? null;
   const featuredMatch = liveMatch ?? lastMatch;
 
   const teamA = featuredMatch ? teams.find((team) => team.id === featuredMatch.teamAId) : null;
@@ -47,7 +48,7 @@ export async function getLiveScoreData() {
         }
       : null,
     upcomingMatches: matches
-      .filter((match) => !match.winnerId)
+      .filter((match) => !isMatchFinished(match))
       .slice(0, 4)
       .map((match) => ({
         id: match.id,
@@ -62,6 +63,7 @@ export async function getLiveScoreData() {
       teamName: standing.teamName,
       played: standing.played,
       win: standing.win,
+      draw: standing.draw,
       loss: standing.loss,
       points: standing.points,
       gameDiff: standing.gameDiff

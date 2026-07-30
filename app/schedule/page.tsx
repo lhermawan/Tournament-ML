@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/section-title";
 import { getLeagueData } from "@/lib/data";
+import { isMatchFinished } from "@/lib/tournament";
 
 export default async function SchedulePage() {
   const { matches } = await getLeagueData();
@@ -21,10 +22,10 @@ export default async function SchedulePage() {
                 .map((match) => (
                   <Card key={match.id} className="p-4">
                     <div className="flex items-center justify-between gap-4">
-                      <Badge tone={match.winnerId ? "success" : "neutral"}>
-                        {match.winnerId ? "Selesai" : "Terjadwal"}
+                      <Badge tone={isMatchFinished(match) ? "success" : "neutral"}>
+                        {isMatchFinished(match) ? "Selesai" : "Terjadwal"}
                       </Badge>
-                      {match.winnerId && (
+                      {isMatchFinished(match) && (
                         <span className="text-sm font-black">
                           {match.scoreA} - {match.scoreB}
                         </span>

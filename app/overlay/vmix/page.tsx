@@ -97,10 +97,11 @@ export default async function VMixOverlayPage({ searchParams }: VMixOverlayPageP
           <BroadcastPanel title="Klasemen" eyebrow="League Table">
             <div className="space-y-2">
               {data.standings.map((row) => (
-                <div key={row.teamId} className="grid grid-cols-[56px_1fr_70px_70px_90px] items-center gap-3 bg-gradient-to-r from-white/[0.13] to-white/[0.04] px-4 py-3 text-lg font-black uppercase shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+                <div key={row.teamId} className="grid grid-cols-[56px_1fr_58px_58px_58px_90px] items-center gap-3 bg-gradient-to-r from-white/[0.13] to-white/[0.04] px-4 py-3 text-lg font-black uppercase shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
                   <span className="text-[#f9c74f]">#{row.rank}</span>
                   <span className="truncate italic">{row.teamName}</span>
                   <span>{row.win}W</span>
+                  <span>{row.draw}D</span>
                   <span>{row.loss}L</span>
                   <span className="text-right text-[#f9c74f]">{row.points}PTS</span>
                 </div>
