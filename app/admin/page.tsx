@@ -25,6 +25,7 @@ import { ActionSubmitButton } from "@/components/ui/action-submit-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SectionTitle } from "@/components/section-title";
+import { MatchScreenshotKdaImporter } from "@/components/match-screenshot-kda-importer";
 import { TeamDraftWheel } from "@/components/team-draft-wheel";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueData } from "@/lib/data";
@@ -379,7 +380,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
             {params?.gameSaved && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                Detail game berhasil disimpan (BO2/BO3/BO5 sesuai fase).
+                Detail game/KDA berhasil disimpan (BO2/BO3/BO5 sesuai fase).
               </p>
             )}
             {params?.gameError && (
@@ -482,6 +483,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <ActionSubmitButton className="w-full" label="Simpan Detail Game Series" pendingLabel="Menyimpan detail game..." />
             </form>
 
+            <MatchScreenshotKdaImporter matches={matches} teams={teams} />
+
             {pendingMatch?.games?.length ? (
               <div className="space-y-2 rounded-md border border-border bg-muted p-4">
                 <p className="text-sm font-black">Game tersimpan untuk match aktif</p>
@@ -491,6 +494,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <p className="text-xs text-muted-foreground">
                       MVP {game.mvp ?? "-"} | KDA {game.mvpKills}/{game.mvpDeaths}/{game.mvpAssists}
                     </p>
+                    {game.playerStats?.length ? (
+                      <div className="mt-2 grid gap-1 text-xs">
+                        {game.playerStats.map((stat) => (
+                          <p key={stat.playerId} className="rounded bg-muted px-2 py-1">
+                            {stat.nickname}: {stat.kills}/{stat.deaths}/{stat.assists}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
                     {game.screenshotUrl && (
                       <a href={game.screenshotUrl} target="_blank" className="mt-1 inline-block text-xs font-bold text-primary">
                         Lihat screenshot

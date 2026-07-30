@@ -35,7 +35,11 @@ export async function getLeagueData() {
             matchgame: {
               include: {
                 team: true,
-                player: true
+                player: true,
+                matchgamestat: {
+                  include: { player: true },
+                  orderBy: { createdAt: "asc" }
+                }
               },
               orderBy: { gameNumber: "asc" }
             }
@@ -94,7 +98,14 @@ export async function getLeagueData() {
         mvpKills: game.mvpKills,
         mvpDeaths: game.mvpDeaths,
         mvpAssists: game.mvpAssists,
-        screenshotUrl: game.screenshotUrl ?? undefined
+        screenshotUrl: game.screenshotUrl ?? undefined,
+        playerStats: game.matchgamestat.map((stat) => ({
+          playerId: stat.playerId,
+          nickname: stat.player.nickname,
+          kills: stat.kills,
+          deaths: stat.deaths,
+          assists: stat.assists
+        }))
       }))
     }));
     const mappedPlayers = mapPlayers(players);
@@ -164,15 +175,25 @@ function calculatePlayerStandings(players: ReturnType<typeof mapPlayers>, teams:
 
   matches.forEach((match) => {
     match.games?.forEach((game) => {
-      if (!game.mvpId) return;
-      const row = table.get(game.mvpId);
-      if (!row) return;
+      if (game.mvpId) {
+        const mvpRow = table.get(game.mvpId);
+        if (mvpRow) mvpRow.mvpCount += 1;
+      }
 
-      row.mvpCount += 1;
-      row.kills += game.mvpKills;
-      row.deaths += game.mvpDeaths;
-      row.assists += game.mvpAssists;
-      row.kda = Number(((row.kills + row.assists) / Math.max(1, row.deaths)).toFixed(2));
+      const statRows = game.playerStats?.length
+        ? game.playerStats
+        : game.mvpId
+          ? [{ playerId: game.mvpId, kills: game.mvpKills, deaths: game.mvpDeaths, assists: game.mvpAssists }]
+          : [];
+
+      statRows.forEach((stat) => {
+        const row = table.get(stat.playerId);
+        if (!row) return;
+        row.kills += stat.kills;
+        row.deaths += stat.deaths;
+        row.assists += stat.assists;
+        row.kda = Number(((row.kills + row.assists) / Math.max(1, row.deaths)).toFixed(2));
+      });
     });
   });
 

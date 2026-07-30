@@ -47,12 +47,29 @@ model matchgame {
   createdAt     DateTime @default(now())
   updatedAt     DateTime
   match         match    @relation(fields: [matchId], references: [id], onDelete: Cascade, map: "MatchGame_matchId_fkey")
+  matchgamestat matchgamestat[]
   player        player?  @relation(fields: [mvpId], references: [id], map: "MatchGame_mvpId_fkey")
   team          team?    @relation(fields: [winnerId], references: [id], map: "MatchGame_winnerId_fkey")
 
   @@unique([matchId, gameNumber], map: "MatchGame_matchId_gameNumber_key")
   @@index([mvpId], map: "MatchGame_mvpId_idx")
   @@index([winnerId], map: "MatchGame_winnerId_idx")
+}
+
+model matchgamestat {
+  id          String    @id
+  matchGameId String
+  playerId    String
+  kills       Int       @default(0)
+  deaths      Int       @default(0)
+  assists     Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  matchgame   matchgame @relation(fields: [matchGameId], references: [id], onDelete: Cascade, map: "MatchGameStat_matchGameId_fkey")
+  player      player    @relation(fields: [playerId], references: [id], onDelete: Cascade, map: "MatchGameStat_playerId_fkey")
+
+  @@unique([matchGameId, playerId], map: "MatchGameStat_matchGameId_playerId_key")
+  @@index([playerId], map: "MatchGameStat_playerId_idx")
 }
 
 model player {
@@ -70,6 +87,7 @@ model player {
   updatedAt  DateTime
   match      match[]
   matchgame  matchgame[]
+  matchgamestat matchgamestat[]
   user       user               @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Player_userId_fkey")
   teammember teammember[]
 }

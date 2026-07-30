@@ -57,6 +57,15 @@ export type MatchGame = {
   mvpDeaths: number;
   mvpAssists: number;
   screenshotUrl?: string;
+  playerStats?: MatchGamePlayerStat[];
+};
+
+export type MatchGamePlayerStat = {
+  playerId: string;
+  nickname: string;
+  kills: number;
+  deaths: number;
+  assists: number;
 };
 
 export type Standing = {
