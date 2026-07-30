@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, LayoutDashboard, LogIn, ShieldCheck, Trophy, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, GitBranch, LayoutDashboard, LogIn, ShieldCheck, Trophy, UserRound, UsersRound } from "lucide-react";
 import { logoutUser } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -9,7 +9,8 @@ const publicNav = [
   { href: "/teams", label: "Tim", icon: UsersRound },
   { href: "/players", label: "Player", icon: UserRound },
   { href: "/schedule", label: "Jadwal", icon: CalendarDays },
-  { href: "/standings", label: "Klasemen", icon: Trophy }
+  { href: "/standings", label: "Klasemen", icon: Trophy },
+  { href: "/bracket", label: "Bracket", icon: GitBranch }
 ];
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
