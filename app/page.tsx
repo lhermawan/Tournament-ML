@@ -6,11 +6,12 @@ import { SectionTitle } from "@/components/section-title";
 import { StatCard } from "@/components/stat-card";
 import { getLeagueData } from "@/lib/data";
 import { getLiveScoreData } from "@/lib/live-score";
+import { isMatchFinished } from "@/lib/tournament";
 
 export default async function HomePage() {
   const { isDemo, season, matches, players, standings, teams } = await getLeagueData();
   const liveScore = await getLiveScoreData();
-  const nextMatches = matches.filter((match) => !match.winnerId).slice(0, 4);
+  const nextMatches = matches.filter((match) => !isMatchFinished(match)).slice(0, 4);
 
   return (
     <AppShell>
@@ -65,7 +66,7 @@ export default async function HomePage() {
         <StatCard label="Peserta" value={players.length} icon={UsersRound} helper="Terverifikasi" />
         <StatCard label="Tim" value={teams.length} icon={ShieldCheck} helper="Role lengkap" />
         <StatCard label="Jadwal" value={matches.length} icon={CalendarDays} helper="Round robin" />
-        <StatCard label="Match selesai" value={matches.filter((match) => match.winnerId).length} icon={Trophy} helper="Klasemen live" />
+        <StatCard label="Match selesai" value={matches.filter((match) => isMatchFinished(match)).length} icon={Trophy} helper="Klasemen live" />
       </div>
 
       <section className="mb-8">

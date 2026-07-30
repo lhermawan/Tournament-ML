@@ -27,6 +27,7 @@ import { SectionTitle } from "@/components/section-title";
 import { TeamDraftWheel } from "@/components/team-draft-wheel";
 import { getCurrentUser } from "@/lib/auth";
 import { getLeagueData } from "@/lib/data";
+import { isMatchFinished } from "@/lib/tournament";
 import { RANKS, ROLES } from "@/lib/types";
 import { redirect } from "next/navigation";
 
@@ -55,7 +56,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const params = await searchParams;
   const { isDemo, season, players, teams, matches } = await getLeagueData();
-  const pendingMatch = matches.find((match) => !match.winnerId);
+  const pendingMatch = matches.find((match) => !isMatchFinished(match));
   const playerError = params?.playerError;
 
   return (
@@ -382,7 +383,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <label className="block text-sm font-semibold">
                 Match Live
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !match.winnerId).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
@@ -417,7 +418,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <label className="block text-sm font-semibold">
                   Match Series
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                    {matches.filter((match) => !match.winnerId).map((match) => (
+                    {matches.filter((match) => !isMatchFinished(match)).map((match) => (
                       <option key={match.id} value={match.id}>
                         Day {match.week}: {match.teamAName} vs {match.teamBName}
                       </option>
@@ -496,7 +497,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <label className="block text-sm font-semibold">
                 Match Final
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !match.winnerId).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>

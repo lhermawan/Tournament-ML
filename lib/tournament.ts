@@ -129,6 +129,14 @@ export function generateRoundRobin(teams: Team[]): Match[] {
   return schedule.sort((a, b) => a.week - b.week);
 }
 
+export function isMatchFinished(match: Match): boolean {
+  if (match.winnerId) return true;
+  if (match.scoreA === undefined || match.scoreB === undefined) return false;
+  if (match.scoreA === match.scoreB) return true;
+
+  return (match.games?.length ?? 0) === 0;
+}
+
 export function calculateStandings(teams: Team[], matches: Match[]): Standing[] {
   const table = new Map<string, Standing>();
 
@@ -138,6 +146,7 @@ export function calculateStandings(teams: Team[], matches: Match[]): Standing[] 
       teamName: team.name,
       played: 0,
       win: 0,
+      draw: 0,
       loss: 0,
       points: 0,
       gameDiff: 0
@@ -145,18 +154,26 @@ export function calculateStandings(teams: Team[], matches: Match[]): Standing[] 
   });
 
   matches
-    .filter((match) => match.winnerId && match.scoreA !== undefined && match.scoreB !== undefined)
+    .filter((match) => isMatchFinished(match) && match.scoreA !== undefined && match.scoreB !== undefined)
     .forEach((match) => {
       const teamA = table.get(match.teamAId);
       const teamB = table.get(match.teamBId);
-      if (!teamA || !teamB || !match.winnerId) return;
+      if (!teamA || !teamB) return;
+
+      const scoreA = match.scoreA ?? 0;
+      const scoreB = match.scoreB ?? 0;
 
       teamA.played += 1;
       teamB.played += 1;
-      teamA.gameDiff += (match.scoreA ?? 0) - (match.scoreB ?? 0);
-      teamB.gameDiff += (match.scoreB ?? 0) - (match.scoreA ?? 0);
+      teamA.gameDiff += scoreA - scoreB;
+      teamB.gameDiff += scoreB - scoreA;
 
-      if (match.winnerId === match.teamAId) {
+      if (scoreA === scoreB) {
+        teamA.draw += 1;
+        teamB.draw += 1;
+        teamA.points += 1;
+        teamB.points += 1;
+      } else if (match.winnerId === match.teamAId || scoreA > scoreB) {
         teamA.win += 1;
         teamA.points += 3;
         teamB.loss += 1;

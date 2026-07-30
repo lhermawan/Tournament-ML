@@ -64,6 +64,7 @@ export type Standing = {
   teamName: string;
   played: number;
   win: number;
+  draw: number;
   loss: number;
   points: number;
   gameDiff: number;

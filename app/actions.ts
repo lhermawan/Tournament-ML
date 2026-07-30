@@ -756,7 +756,7 @@ export async function saveMatchResult(formData: FormData) {
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) redirect("/admin?error=match-not-found");
 
-  const winnerId = scoreA >= scoreB ? match.teamAId : match.teamBId;
+  const winnerId = scoreA === scoreB ? null : scoreA > scoreB ? match.teamAId : match.teamBId;
   const mvp = mvpNickname
     ? await prisma.player.findFirst({ where: { nickname: { equals: mvpNickname } } })
     : null;
