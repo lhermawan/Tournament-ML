@@ -5,6 +5,7 @@ import {
   createSeason,
   deletePlayer,
   deleteTeam,
+  generatePlayoffBracketAction,
   generateScheduleAction,
   generateTeamsAction,
   resetTeamsAction,
@@ -45,6 +46,7 @@ type AdminPageProps = {
     notice?: string;
     deleteError?: string;
     scheduleError?: string;
+    playoffError?: string;
   }>;
 };
 
@@ -80,6 +82,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "status-updated" && "Status season berhasil diperbarui."}
           {params.notice === "teams-generated" && "Team berhasil digenerate."}
           {params.notice === "schedule-generated" && "Jadwal berhasil digenerate."}
+          {params.notice === "playoff-generated" && "Bracket double elimination Top 4 berhasil dibuat."}
           {params.notice === "live-updated" && "Live score berhasil diupdate."}
           {params.notice === "live-reset" && "Live score berhasil direset."}
           {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
@@ -100,6 +103,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {params?.scheduleError && (
         <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
           Jadwal tidak bisa diperbarui. Day harus minimal 1 dan team A/B tidak boleh sama.
+        </p>
+      )}
+
+      {params?.playoffError && (
+        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          Playoff belum bisa dibuat. Pastikan semua team sudah saling bertemu dan semua match liga sudah selesai.
         </p>
       )}
 
@@ -131,10 +140,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <input name="seasonId" type="hidden" value={season?.id ?? ""} />
           <AdminAction icon={Play} label="Generate jadwal" />
         </form>
-        <form action={setSeasonStatus}>
+        <form action={generatePlayoffBracketAction}>
           <input name="seasonId" type="hidden" value={season?.id ?? ""} />
-          <input name="status" type="hidden" value="playoff" />
-          <AdminAction icon={Trophy} label="Playoff Top 4" />
+          <AdminAction icon={Trophy} label="Bracket Top 4" />
         </form>
       </div>
 

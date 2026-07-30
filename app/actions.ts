@@ -8,11 +8,10 @@ import { redirect } from "next/navigation";
 import path from "node:path";
 import { z } from "zod";
 import { clearSession, isAdmin, setSession } from "@/lib/auth";
-import { rankPower } from "@/lib/tournament";
-import { generateBalancedTeams, generateRoundRobin } from "@/lib/tournament";
+import { calculateStandings, generateBalancedTeams, generateRoundRobin, isMatchFinished, rankPower } from "@/lib/tournament";
 import { roleFromDb, roleToDb } from "@/lib/enum-map";
 import { prisma } from "@/lib/prisma";
-import { ROLES, type Player } from "@/lib/types";
+import { ROLES, type Match, type Player, type Team } from "@/lib/types";
 
 const roleSchema = z.enum(["Jungler", "Mid Lane", "Gold Lane", "EXP Lane", "Roamer"]);
 const rankSchema = z.enum(["Master", "Grandmaster", "Epic", "Legend", "Mythic"]);
@@ -540,6 +539,90 @@ export async function generateScheduleAction(formData: FormData) {
   redirect("/admin?notice=schedule-generated");
 }
 
+
+export async function generatePlayoffBracketAction(formData: FormData) {
+  await assertAdmin();
+  const seasonId = String(formData.get("seasonId") ?? "");
+  if (!seasonId) redirect("/admin?playoffError=season");
+
+  const season = await prisma.season.findUnique({ where: { id: seasonId } });
+  if (!season) redirect("/admin?playoffError=season");
+  if (season.status === "playoff" || season.status === "completed") redirect("/admin?playoffError=exists");
+
+  const dbTeams = await prisma.team.findMany({
+    where: { seasonId },
+    include: {
+      teammember: {
+        include: {
+          player: {
+            include: { user: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: "asc" }
+  });
+
+  const dbMatches = await prisma.match.findMany({
+    where: { seasonId },
+    include: {
+      matchgame: true,
+      player: true,
+      team_match_teamAIdToteam: true,
+      team_match_teamBIdToteam: true
+    },
+    orderBy: [{ week: "asc" }, { createdAt: "asc" }]
+  });
+
+  const teams = mapDbTeamsForTournament(dbTeams);
+  const matches: Match[] = dbMatches.map((match) => ({
+    id: match.id,
+    week: match.week,
+    teamAId: match.teamAId,
+    teamBId: match.teamBId,
+    teamAName: match.team_match_teamAIdToteam.teamName,
+    teamBName: match.team_match_teamBIdToteam.teamName,
+    winnerId: match.winnerId ?? undefined,
+    scoreA: match.scoreA ?? undefined,
+    scoreB: match.scoreB ?? undefined,
+    mvp: match.player?.nickname,
+    games: match.matchgame.map((game) => ({
+      id: game.id,
+      gameNumber: game.gameNumber,
+      winnerId: game.winnerId ?? undefined,
+      mvpKills: game.mvpKills,
+      mvpDeaths: game.mvpDeaths,
+      mvpAssists: game.mvpAssists
+    }))
+  }));
+
+  const leagueMatchesNeeded = (teams.length * (teams.length - 1)) / 2;
+  const finishedLeagueMatches = matches.filter(isMatchFinished).length;
+  if (teams.length < 4 || matches.length < leagueMatchesNeeded || finishedLeagueMatches < leagueMatchesNeeded) {
+    redirect("/admin?playoffError=league-incomplete");
+  }
+
+  const topFour = calculateStandings(teams, matches).slice(0, 4);
+  if (topFour.length < 4) redirect("/admin?playoffError=top4");
+
+  const startWeek = nextPlayoffWeek(matches);
+  await prisma.$transaction(async (tx) => {
+    await tx.match.createMany({
+      data: [
+        buildMatchRecord(seasonId, startWeek, topFour[0].teamId, topFour[3].teamId),
+        buildMatchRecord(seasonId, startWeek, topFour[1].teamId, topFour[2].teamId)
+      ]
+    });
+    await tx.season.update({
+      where: { id: seasonId },
+      data: { status: "playoff", updatedAt: new Date() }
+    });
+  });
+
+  revalidateAll();
+  redirect("/admin?notice=playoff-generated");
+}
+
 export async function deleteTeam(formData: FormData) {
   await assertAdmin();
 
@@ -739,6 +822,10 @@ export async function saveMatchGameResult(formData: FormData) {
         mvpId: topMvp ?? mvp?.id
       }
     });
+
+    if (finalWinnerId) {
+      await ensureNextPlayoffMatches(tx, match.seasonId);
+    }
   });
 
   revalidateAll();
@@ -761,14 +848,20 @@ export async function saveMatchResult(formData: FormData) {
     ? await prisma.player.findFirst({ where: { nickname: { equals: mvpNickname } } })
     : null;
 
-  await prisma.match.update({
-    where: { id: matchId },
-    data: {
-      scoreA,
-      scoreB,
-      winnerId,
-      mvpId: mvp?.id,
-      screenshotUrl: screenshotUrl || undefined
+  await prisma.$transaction(async (tx) => {
+    await tx.match.update({
+      where: { id: matchId },
+      data: {
+        scoreA,
+        scoreB,
+        winnerId,
+        mvpId: mvp?.id,
+        screenshotUrl: screenshotUrl || undefined
+      }
+    });
+
+    if (winnerId) {
+      await ensureNextPlayoffMatches(tx, match.seasonId);
     }
   });
 
@@ -830,9 +923,91 @@ async function assertAdmin() {
 }
 
 function revalidateAll() {
-  ["/", "/admin", "/dashboard", "/season", "/teams", "/schedule", "/standings"].forEach((path) =>
+  ["/", "/admin", "/dashboard", "/season", "/teams", "/schedule", "/standings", "/bracket"].forEach((path) =>
     revalidatePath(path)
   );
+}
+
+async function ensureNextPlayoffMatches(tx: any, seasonId: string) {
+  const season = await tx.season.findUnique({ where: { id: seasonId } });
+  if (season?.status !== "playoff") return;
+
+  const teamCount = await tx.team.count({ where: { seasonId } });
+  const leagueWeekCount = Math.ceil(((teamCount * (teamCount - 1)) / 2) / 2);
+  const playoffMatches = await tx.match.findMany({
+    where: { seasonId, week: { gt: leagueWeekCount } },
+    orderBy: [{ week: "asc" }, { createdAt: "asc" }]
+  });
+
+  const [match1, match2, match3, match4, match5, match6] = playoffMatches;
+  const match1Loser = match1?.winnerId ? (match1.winnerId === match1.teamAId ? match1.teamBId : match1.teamAId) : null;
+  const match2Loser = match2?.winnerId ? (match2.winnerId === match2.teamAId ? match2.teamBId : match2.teamAId) : null;
+  const match3Loser = match3?.winnerId ? (match3.winnerId === match3.teamAId ? match3.teamBId : match3.teamAId) : null;
+
+  if (playoffMatches.length === 2 && match1?.winnerId && match2?.winnerId && match1Loser && match2Loser) {
+    const week = nextPlayoffWeek(playoffMatches);
+    await tx.match.createMany({
+      data: [
+        buildMatchRecord(seasonId, week, match1.winnerId, match2.winnerId),
+        buildMatchRecord(seasonId, week, match1Loser, match2Loser)
+      ]
+    });
+    return;
+  }
+
+  if (playoffMatches.length === 4 && match3?.winnerId && match4?.winnerId && match3Loser) {
+    await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3Loser, match4.winnerId) });
+    return;
+  }
+
+  if (playoffMatches.length === 5 && match3?.winnerId && match5?.winnerId) {
+    await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3.winnerId, match5.winnerId) });
+    return;
+  }
+
+  if (playoffMatches.length === 6 && match6?.winnerId) {
+    await tx.season.update({ where: { id: seasonId }, data: { status: "completed", updatedAt: new Date() } });
+  }
+}
+
+function mapDbTeamsForTournament(dbTeams: any[]): Team[] {
+  return dbTeams.map((team) => ({
+    id: team.id,
+    name: team.teamName,
+    power: team.power,
+    members: Array.isArray(team.teammember)
+      ? team.teammember.map((member: any) => ({
+          laneRole: roleFromDb[member.laneRole],
+          player: {
+            id: member.player.id,
+            name: member.player.user.name,
+            nickname: member.player.nickname,
+            mlId: member.player.mlId,
+            phone: member.player.phone,
+            unit: member.player.unit,
+            rank: member.player.rank,
+            mainRole: roleFromDb[member.player.mainRole],
+            secondRole: member.player.secondRole ? roleFromDb[member.player.secondRole] : undefined,
+            verified: member.player.verified
+          }
+        }))
+      : []
+  }));
+}
+
+function nextPlayoffWeek(matches: { week: number }[]) {
+  return Math.max(0, ...matches.map((match) => match.week)) + 1;
+}
+
+function buildMatchRecord(seasonId: string, week: number, teamAId: string, teamBId: string) {
+  return {
+    id: randomUUID(),
+    seasonId,
+    week,
+    teamAId,
+    teamBId,
+    updatedAt: new Date()
+  };
 }
 
 function safeJsonParse(value: string) {
