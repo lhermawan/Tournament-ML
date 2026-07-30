@@ -169,7 +169,10 @@ function calculatePlayerStandings(players: ReturnType<typeof mapPlayers>, teams:
       kills: 0,
       deaths: 0,
       assists: 0,
-      kda: 0
+      kda: 0,
+      chocolateCount: 0,
+      gamesPlayed: 0,
+      bestScore: 0
     });
   });
 
@@ -186,20 +189,30 @@ function calculatePlayerStandings(players: ReturnType<typeof mapPlayers>, teams:
           ? [{ playerId: game.mvpId, kills: game.mvpKills, deaths: game.mvpDeaths, assists: game.mvpAssists }]
           : [];
 
+      if (statRows.length) {
+        const chocolatePlayer = [...statRows].sort((a, b) => b.deaths - a.deaths || (a.kills + a.assists) - (b.kills + b.assists))[0];
+        if (chocolatePlayer?.deaths > 0) {
+          const chocolateRow = table.get(chocolatePlayer.playerId);
+          if (chocolateRow) chocolateRow.chocolateCount += 1;
+        }
+      }
+
       statRows.forEach((stat) => {
         const row = table.get(stat.playerId);
         if (!row) return;
+        row.gamesPlayed += 1;
         row.kills += stat.kills;
         row.deaths += stat.deaths;
         row.assists += stat.assists;
         row.kda = Number(((row.kills + row.assists) / Math.max(1, row.deaths)).toFixed(2));
+        row.bestScore = Number((row.mvpCount * 5 + row.kda + row.kills * 0.2 + row.assists * 0.1 - row.chocolateCount * 1.5).toFixed(2));
       });
     });
   });
 
   return [...table.values()]
-    .filter((player) => player.mvpCount > 0 || player.kills > 0 || player.assists > 0)
-    .sort((a, b) => b.mvpCount - a.mvpCount || b.kda - a.kda || b.kills - a.kills);
+    .filter((player) => player.gamesPlayed > 0 || player.mvpCount > 0 || player.kills > 0 || player.assists > 0)
+    .sort((a, b) => b.bestScore - a.bestScore || b.mvpCount - a.mvpCount || b.kda - a.kda || b.kills - a.kills);
 }
 
 function mapPlayer(player: {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, GitBranch, LayoutDashboard, LogIn, ShieldCheck, Trophy, UserRound, UsersRound } from "lucide-react";
+import { BarChart3, CalendarDays, GitBranch, LayoutDashboard, LogIn, ShieldCheck, Trophy, UserRound, UsersRound } from "lucide-react";
 import { logoutUser } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -10,6 +10,7 @@ const publicNav = [
   { href: "/players", label: "Player", icon: UserRound },
   { href: "/schedule", label: "Jadwal", icon: CalendarDays },
   { href: "/standings", label: "Klasemen", icon: Trophy },
+  { href: "/statistics", label: "Statistik", icon: BarChart3 },
   { href: "/bracket", label: "Bracket", icon: GitBranch }
 ];
 

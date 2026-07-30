@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Wand2 } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 import { ActionSubmitButton } from "@/components/ui/action-submit-button";
 import { Button } from "@/components/ui/button";
 import type { Match, Team } from "@/lib/types";
@@ -16,6 +16,8 @@ export function MatchScreenshotKdaImporter({ matches, teams }: Props) {
   const [preview, setPreview] = useState<string>();
   const [ocrText, setOcrText] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
+  const [ocrStatus, setOcrStatus] = useState<string>();
+  const [isReadingOcr, setIsReadingOcr] = useState(false);
   const selectedMatch = matches.find((match) => match.id === matchId);
 
   const matchPlayers = useMemo(() => {
@@ -30,10 +32,39 @@ export function MatchScreenshotKdaImporter({ matches, teams }: Props) {
     setRows(baseRows.map((row) => row.playerId === playerId ? { ...row, [field]: Math.max(0, value) } : row));
   }
 
-  function autofillFromText() {
+  async function readKdaFromScreenshot(file?: File) {
+    if (!file) {
+      setOcrStatus("Pilih screenshot dulu sebelum OCR otomatis.");
+      return;
+    }
+
+    setIsReadingOcr(true);
+    setOcrStatus("Membaca screenshot dengan OCR...");
+    try {
+      const tesseract = await import("tesseract.js");
+      const result = await tesseract.recognize(file, "eng", {
+        logger: (message) => {
+          if (message.status === "recognizing text") {
+            setOcrStatus(`OCR berjalan ${Math.round((message.progress ?? 0) * 100)}%`);
+          }
+        }
+      });
+      const text = result.data.text.trim();
+      setOcrText(text);
+      autofillFromText(text);
+      setOcrStatus(text ? "OCR selesai. KDA otomatis diisi, silakan cek ulang angka sebelum simpan." : "OCR selesai tapi teks tidak terbaca. Coba crop scoreboard lebih jelas.");
+    } catch (error) {
+      console.error(error);
+      setOcrStatus("OCR gagal dijalankan. Pastikan tesseract.js sudah ter-install dan coba lagi.");
+    } finally {
+      setIsReadingOcr(false);
+    }
+  }
+
+  function autofillFromText(sourceText = ocrText) {
     const nextRows = matchPlayers.map((player) => {
       const escaped = player.nickname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const line = ocrText.split(/\n+/).find((item) => new RegExp(escaped, "i").test(item));
+      const line = sourceText.split(/\n+/).find((item) => new RegExp(escaped, "i").test(item));
       const numbers = line?.match(/\b\d{1,2}\b/g)?.map(Number) ?? [];
       const kda = numbers.length >= 3 ? numbers.slice(-4, -1).length === 3 ? numbers.slice(-4, -1) : numbers.slice(-3) : [0, 0, 0];
       return { playerId: player.id, nickname: player.nickname, kills: kda[0] ?? 0, deaths: kda[1] ?? 0, assists: kda[2] ?? 0 };
@@ -45,7 +76,7 @@ export function MatchScreenshotKdaImporter({ matches, teams }: Props) {
     <form action="/api/admin/match-kda-import" method="post" encType="multipart/form-data" className="space-y-4 rounded-md border border-border bg-white p-4">
       <div>
         <p className="text-sm font-black">Upload SS Hasil & Auto Isi KDA Player</p>
-        <p className="text-xs text-muted-foreground">Upload screenshot hasil pertandingan, tempel teks OCR kalau tersedia, lalu klik auto-fill untuk mengisi K/D/A semua member match.</p>
+        <p className="text-xs text-muted-foreground">Upload screenshot hasil pertandingan; sistem akan mencoba OCR otomatis dengan tesseract.js lalu mengisi K/D/A semua member match.</p>
       </div>
       <label className="block text-sm font-semibold">
         Match Series
@@ -67,6 +98,7 @@ export function MatchScreenshotKdaImporter({ matches, teams }: Props) {
           <input name="screenshot" type="file" accept="image/*" onChange={(event) => {
             const file = event.target.files?.[0];
             setPreview(file ? URL.createObjectURL(file) : undefined);
+            void readKdaFromScreenshot(file);
           }} className="mt-2 w-full rounded-md border border-border bg-muted px-3 py-2 text-sm" />
         </label>
       </div>
@@ -75,8 +107,9 @@ export function MatchScreenshotKdaImporter({ matches, teams }: Props) {
         Teks OCR / salinan scoreboard
         <textarea value={ocrText} onChange={(event) => setOcrText(event.target.value)} className="mt-2 min-h-24 w-full rounded-md border border-border px-3 py-2 text-sm" placeholder="Tempel hasil OCR di sini. Sistem akan mencari nickname dan angka K/D/A pada baris yang sama." />
       </label>
-      <Button type="button" variant="secondary" onClick={autofillFromText} className="w-full">
-        <Wand2 className="h-4 w-4" /> Auto-fill KDA dari teks
+      {ocrStatus && <p className="rounded-md bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">{ocrStatus}</p>}
+      <Button type="button" variant="secondary" onClick={() => autofillFromText()} disabled={isReadingOcr} className="w-full">
+        {isReadingOcr ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Auto-fill KDA dari teks
       </Button>
       <div className="space-y-2">
         {(rows.length ? rows : matchPlayers.map((player) => ({ playerId: player.id, nickname: player.nickname, kills: 0, deaths: 0, assists: 0 }))).map((row, index) => (
