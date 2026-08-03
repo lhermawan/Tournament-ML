@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -10,14 +10,14 @@ const VALID_GAMES = new Set([1, 2, 3, 4, 5]);
 
 export async function POST(request: Request) {
   if (!(await isAdmin())) {
-    redirect("/login?error=admin");
+    return redirectAfterPost(request, "/login?error=admin");
   }
 
   const formData = await request.formData();
   const matchId = String(formData.get("matchId") ?? "");
   const gameNumber = Number(formData.get("gameNumber") ?? 0);
   if (!matchId || !VALID_GAMES.has(gameNumber)) {
-    redirect("/admin?gameError=invalid");
+    return redirectAfterPost(request, "/admin?gameError=invalid");
   }
 
   const match = await prisma.match.findUnique({
@@ -27,14 +27,14 @@ export async function POST(request: Request) {
       team_match_teamBIdToteam: { include: { teammember: true } }
     }
   });
-  if (!match) redirect("/admin?gameError=match");
+  if (!match) return redirectAfterPost(request, "/admin?gameError=match");
 
   const allowedPlayerIds = new Set([
     ...match.team_match_teamAIdToteam.teammember.map((member) => member.playerId),
     ...match.team_match_teamBIdToteam.teammember.map((member) => member.playerId)
   ]);
   const stats = extractStats(formData).filter((stat) => allowedPlayerIds.has(stat.playerId));
-  if (!stats.length) redirect("/admin?gameError=invalid");
+  if (!stats.length) return redirectAfterPost(request, "/admin?gameError=invalid");
 
   const screenshotUrl = await saveScreenshotFile(formData.get("screenshot"), matchId, gameNumber);
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   });
 
   ["/", "/admin", "/dashboard", "/season", "/teams", "/schedule", "/standings", "/bracket"].forEach((url) => revalidatePath(url));
-  redirect("/admin?gameSaved=1");
+  return redirectAfterPost(request, "/admin?gameSaved=1");
 }
 
 function extractStats(formData: FormData) {
@@ -88,4 +88,8 @@ async function saveScreenshotFile(fileInput: FormDataEntryValue | null, matchId:
   const safeName = `${matchId}-${gameNumber}-${Date.now()}${extension}`;
   await writeFile(path.join(uploadDir, safeName), bytes);
   return `/uploads/match-results/${safeName}`;
+}
+
+function redirectAfterPost(request: Request, pathname: string) {
+  return NextResponse.redirect(new URL(pathname, request.url), 303);
 }
