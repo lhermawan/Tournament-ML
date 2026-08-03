@@ -847,11 +847,14 @@ export async function saveMatchGameResult(formData: FormData) {
     const teamAWins = games.filter((game) => game.winnerId === match.teamAId).length;
     const teamBWins = games.filter((game) => game.winnerId === match.teamBId).length;
     const isLeagueStage = match.season.status === "league";
-    const maxWeekInSeason = await tx.match.aggregate({
-      where: { seasonId: match.seasonId },
-      _max: { week: true }
+    const teamCount = await tx.team.count({ where: { seasonId: match.seasonId } });
+    const leagueWeekCount = Math.ceil(((teamCount * (teamCount - 1)) / 2) / 2);
+    const playoffMatches = await tx.match.findMany({
+      where: { seasonId: match.seasonId, week: { gt: leagueWeekCount } },
+      select: { week: true }
     });
-    const isGrandFinal = match.season.status === "playoff" && match.week === (maxWeekInSeason._max.week ?? match.week);
+    const finalWeek = playoffMatches.length >= 6 ? Math.max(...playoffMatches.map((playoffMatch) => playoffMatch.week)) : Number.POSITIVE_INFINITY;
+    const isGrandFinal = match.season.status === "playoff" && match.week === finalWeek;
     const targetWins = isLeagueStage ? 2 : isGrandFinal ? 3 : 2;
     const finalWinnerId = teamAWins >= targetWins ? match.teamAId : teamBWins >= targetWins ? match.teamBId : null;
     const topMvp = getMostFrequent(games.map((game) => game.mvpId).filter(Boolean) as string[]);

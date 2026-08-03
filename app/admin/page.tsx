@@ -62,6 +62,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const { isDemo, season, players, teams, matches } = await getLeagueData();
   const pendingMatch = matches.find((match) => !isMatchFinished(match));
   const playerError = params?.playerError;
+  const playoffStartWeek = teams.length >= 2 ? Math.ceil(((teams.length * (teams.length - 1)) / 2) / 2) + 1 : Number.POSITIVE_INFINITY;
+  const playoffMatches = matches.filter((match) => match.week >= playoffStartWeek);
+  const finalWeek = playoffMatches.length >= 6 ? Math.max(...playoffMatches.map((match) => match.week)) : Number.POSITIVE_INFINITY;
 
   return (
     <AppShell>
@@ -410,7 +413,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
             {params?.gameSaved && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                Detail game/KDA berhasil disimpan (BO2/BO3/BO5 sesuai fase).
+                Detail game/KDA berhasil disimpan. Bracket awal sampai semifinal BO3, final BO5.
               </p>
             )}
             {params?.gameError && (
@@ -453,13 +456,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </form>
 
             <form action={saveMatchGameResult} className="space-y-4 rounded-md border border-border bg-white p-4">
+              <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
+                Format bracket: ronde awal sampai semifinal menggunakan BO3 (butuh 2 win), sedangkan final menggunakan BO5 (butuh 3 win).
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm font-semibold">
                   Match Series
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
                     {matches.filter((match) => !isMatchFinished(match)).map((match) => (
                       <option key={match.id} value={match.id}>
-                        Day {match.week}: {match.teamAName} vs {match.teamBName}
+                        Day {match.week}: {match.teamAName} vs {match.teamBName} - {getSeriesFormat(match.week, playoffStartWeek, finalWeek)}
                       </option>
                     ))}
                   </select>
@@ -514,6 +520,58 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             </form>
 
             <MatchScreenshotKdaImporter matches={matches} teams={teams} />
+
+            <div className="space-y-3 rounded-md border border-border bg-muted p-4">
+              <div>
+                <p className="text-sm font-black">Histori Match & Screenshot</p>
+                <p className="text-xs text-muted-foreground">Admin bisa melihat semua game yang sudah tersimpan untuk tiap match, termasuk link screenshot hasil game.</p>
+              </div>
+              {matches.map((match) => {
+                const scoreText = match.scoreA !== undefined && match.scoreB !== undefined ? `${match.scoreA}-${match.scoreB}` : "Belum ada skor";
+                return (
+                  <details key={match.id} className="rounded-md bg-white p-3 text-sm">
+                    <summary className="cursor-pointer list-none">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-bold">Day {match.week}: {match.teamAName} vs {match.teamBName}</p>
+                          <p className="text-xs text-muted-foreground">{getSeriesFormat(match.week, playoffStartWeek, finalWeek)} | Skor {scoreText} | Winner {getWinnerName(match) ?? "belum ditentukan"}</p>
+                        </div>
+                        <Badge tone={isMatchFinished(match) ? "primary" : "neutral"}>{isMatchFinished(match) ? "Selesai" : "Berjalan"}</Badge>
+                      </div>
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {match.games?.length ? match.games.map((game) => (
+                        <div key={game.id} className="rounded-md border border-border bg-muted p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="font-bold">Game {game.gameNumber}: {game.winnerName ?? "Winner belum ada"}</p>
+                              <p className="text-xs text-muted-foreground">MVP {game.mvp ?? "-"} | KDA {game.mvpKills}/{game.mvpDeaths}/{game.mvpAssists}</p>
+                            </div>
+                            {game.screenshotUrl ? (
+                              <a href={game.screenshotUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary">
+                                Buka screenshot
+                              </a>
+                            ) : (
+                              <span className="text-xs font-semibold text-muted-foreground">Tanpa screenshot</span>
+                            )}
+                          </div>
+                          {game.screenshotUrl ? (
+                            <a href={game.screenshotUrl} target="_blank" rel="noreferrer" className="mt-3 block overflow-hidden rounded-md border border-border bg-white">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={game.screenshotUrl} alt={`Screenshot ${match.teamAName} vs ${match.teamBName} game ${game.gameNumber}`} className="max-h-56 w-full object-contain" />
+                            </a>
+                          ) : null}
+                        </div>
+                      )) : (
+                        <p className="rounded-md border border-dashed border-border bg-muted p-3 text-xs text-muted-foreground">Belum ada detail game tersimpan.</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+              {!matches.length && <p className="text-xs text-muted-foreground">Belum ada match untuk ditampilkan.</p>}
+            </div>
+
 
             {pendingMatch?.games?.length ? (
               <div className="space-y-2 rounded-md border border-border bg-muted p-4">
@@ -662,6 +720,17 @@ function AdminField({
       />
     </label>
   );
+}
+
+function getSeriesFormat(week: number, playoffStartWeek: number, finalWeek: number) {
+  if (week < playoffStartWeek) return "League BO3";
+  return week === finalWeek ? "Final BO5" : "Bracket BO3";
+}
+
+function getWinnerName(match: { winnerId?: string; teamAId: string; teamBId: string; teamAName: string; teamBName: string }) {
+  if (match.winnerId === match.teamAId) return match.teamAName;
+  if (match.winnerId === match.teamBId) return match.teamBName;
+  return null;
 }
 
 function AdminAction({
