@@ -43,6 +43,13 @@ const deleteTeamSchema = z.object({
   seasonId: z.string().min(1)
 });
 
+const manualMatchScheduleSchema = z.object({
+  seasonId: z.string().min(1),
+  week: z.coerce.number().int().min(1),
+  teamAId: z.string().min(1),
+  teamBId: z.string().min(1)
+});
+
 const updateMatchScheduleSchema = z.object({
   matchId: z.string().min(1),
   week: z.coerce.number().int().min(1),
@@ -645,6 +652,42 @@ export async function deleteTeam(formData: FormData) {
 
   revalidateAll();
   redirect("/admin?notice=team-deleted");
+}
+
+export async function createManualMatchSchedule(formData: FormData) {
+  await assertAdmin();
+
+  const payload = manualMatchScheduleSchema.safeParse(Object.fromEntries(formData));
+  if (!payload.success || payload.data.teamAId === payload.data.teamBId) {
+    redirect("/admin?scheduleError=invalid");
+  }
+
+  const { seasonId, week, teamAId, teamBId } = payload.data;
+  const teams = await prisma.team.findMany({
+    where: { id: { in: [teamAId, teamBId] }, seasonId },
+    select: { id: true }
+  });
+  if (teams.length !== 2) redirect("/admin?scheduleError=team-not-found");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.create({
+      data: {
+        id: randomUUID(),
+        seasonId,
+        week,
+        teamAId,
+        teamBId,
+        updatedAt: new Date()
+      }
+    });
+    await tx.season.update({
+      where: { id: seasonId },
+      data: { status: "league", updatedAt: new Date() }
+    });
+  });
+
+  revalidateAll();
+  redirect("/admin?notice=schedule-created");
 }
 
 export async function updateMatchSchedule(formData: FormData) {

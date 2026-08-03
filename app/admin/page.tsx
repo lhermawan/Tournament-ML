@@ -1,6 +1,7 @@
 import { CalendarPlus, CheckCircle2, FileUp, Lock, Pencil, Play, RotateCcw, Save, Shuffle, Trash2, Trophy, UserCheck, UserPlus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
+  createManualMatchSchedule,
   createManualPlayer,
   createSeason,
   deletePlayer,
@@ -92,6 +93,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "player-deleted" && "Peserta berhasil dihapus."}
           {params.notice === "team-deleted" && "Team dan jadwal terkait berhasil dihapus."}
           {params.notice === "schedule-updated" && "Jadwal match berhasil diperbarui."}
+          {params.notice === "schedule-created" && "Jadwal manual berhasil ditambahkan."}
         </p>
       )}
 
@@ -346,6 +348,34 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <p className="text-sm font-black">Atur Jadwal Manual</p>
                 <p className="text-xs text-muted-foreground">Admin bisa mengganti day dan pasangan team untuk setiap match.</p>
               </div>
+              <form action={createManualMatchSchedule} className="grid gap-3 rounded-md border border-dashed border-primary/40 bg-white p-3 md:grid-cols-[80px_1fr_1fr_auto]">
+                <input name="seasonId" type="hidden" value={season?.id ?? ""} />
+                <label className="block text-xs font-semibold">
+                  Day
+                  <input name="week" type="number" min="1" defaultValue="1" className="mt-1 h-9 w-full rounded-md border border-border px-2 text-sm" />
+                </label>
+                <label className="block text-xs font-semibold">
+                  Team A
+                  <select name="teamAId" className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>{team.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold">
+                  Team B
+                  <select name="teamBId" defaultValue={teams[1]?.id ?? teams[0]?.id ?? ""} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>{team.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <Button type="submit" className="self-end h-9" disabled={teams.length < 2 || !season?.id}>
+                  <CalendarPlus className="h-4 w-4" />
+                  Tambah
+                </Button>
+              </form>
+
               {matches.map((match) => (
                 <form key={match.id} action={updateMatchSchedule} className="grid gap-3 rounded-md bg-white p-3 md:grid-cols-[80px_1fr_1fr_auto]">
                   <input name="matchId" type="hidden" value={match.id} />
@@ -375,7 +405,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </Button>
                 </form>
               ))}
-              {!matches.length && <p className="text-xs text-muted-foreground">Belum ada jadwal. Generate jadwal dulu setelah team tersedia.</p>}
+              {!matches.length && <p className="text-xs text-muted-foreground">Belum ada jadwal. Tambahkan manual di atas atau generate jadwal setelah team tersedia.</p>}
             </div>
 
             {params?.gameSaved && (
