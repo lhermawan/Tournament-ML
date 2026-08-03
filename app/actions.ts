@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import path from "node:path";
 import { z } from "zod";
 import { clearSession, isAdmin, setSession } from "@/lib/auth";
+import { clearLiveScoreOverlayState, writeLiveScoreOverlayState } from "@/lib/live-score-store";
 import { calculateStandings, generateBalancedTeams, generateRoundRobin, isMatchFinished, rankPower } from "@/lib/tournament";
 import { roleFromDb, roleToDb } from "@/lib/enum-map";
 import { prisma } from "@/lib/prisma";
@@ -41,6 +42,13 @@ const deletePlayerSchema = z.object({
 const deleteTeamSchema = z.object({
   teamId: z.string().min(1),
   seasonId: z.string().min(1)
+});
+
+const manualMatchScheduleSchema = z.object({
+  seasonId: z.string().min(1),
+  week: z.coerce.number().int().min(1),
+  teamAId: z.string().min(1),
+  teamBId: z.string().min(1)
 });
 
 const updateMatchScheduleSchema = z.object({
@@ -647,6 +655,42 @@ export async function deleteTeam(formData: FormData) {
   redirect("/admin?notice=team-deleted");
 }
 
+export async function createManualMatchSchedule(formData: FormData) {
+  await assertAdmin();
+
+  const payload = manualMatchScheduleSchema.safeParse(Object.fromEntries(formData));
+  if (!payload.success || payload.data.teamAId === payload.data.teamBId) {
+    redirect("/admin?scheduleError=invalid");
+  }
+
+  const { seasonId, week, teamAId, teamBId } = payload.data;
+  const teams = await prisma.team.findMany({
+    where: { id: { in: [teamAId, teamBId] }, seasonId },
+    select: { id: true }
+  });
+  if (teams.length !== 2) redirect("/admin?scheduleError=team-not-found");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.create({
+      data: {
+        id: randomUUID(),
+        seasonId,
+        week,
+        teamAId,
+        teamBId,
+        updatedAt: new Date()
+      }
+    });
+    await tx.season.update({
+      where: { id: seasonId },
+      data: { status: "league", updatedAt: new Date() }
+    });
+  });
+
+  revalidateAll();
+  redirect("/admin?notice=schedule-created");
+}
+
 export async function updateMatchSchedule(formData: FormData) {
   await assertAdmin();
 
@@ -693,22 +737,16 @@ export async function updateLiveScore(formData: FormData) {
   const matchId = String(formData.get("matchId") ?? "");
   const scoreA = Math.max(0, Number(formData.get("scoreA") ?? 0));
   const scoreB = Math.max(0, Number(formData.get("scoreB") ?? 0));
-  const mvpNickname = String(formData.get("mvp") ?? "").trim();
+  const mvp = String(formData.get("mvp") ?? "").trim();
 
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) redirect("/admin?error=match-not-found");
 
-  const mvp = mvpNickname
-    ? await prisma.player.findFirst({ where: { nickname: { equals: mvpNickname } } })
-    : null;
-
-  await prisma.match.update({
-    where: { id: matchId },
-    data: {
-      scoreA,
-      scoreB,
-      ...(mvpNickname ? { mvpId: mvp?.id } : {})
-    }
+  await writeLiveScoreOverlayState({
+    matchId,
+    scoreA,
+    scoreB,
+    ...(mvp ? { mvp } : {})
   });
 
   revalidateAll();
@@ -718,25 +756,7 @@ export async function updateLiveScore(formData: FormData) {
 export async function resetLiveScore(formData: FormData) {
   await assertAdmin();
 
-  const matchId = String(formData.get("matchId") ?? "");
-  if (!matchId) redirect("/admin?error=match-not-found");
-
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
-  if (!match) redirect("/admin?error=match-not-found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.matchgame.deleteMany({ where: { matchId } });
-    await tx.match.update({
-      where: { id: matchId },
-      data: {
-        scoreA: null,
-        scoreB: null,
-        winnerId: null,
-        mvpId: null,
-        screenshotUrl: null
-      }
-    });
-  });
+  await clearLiveScoreOverlayState();
 
   revalidateAll();
   redirect("/admin?notice=live-reset");

@@ -1,5 +1,6 @@
 import { getLeagueData } from "@/lib/data";
 import { isMatchFinished } from "@/lib/tournament";
+import { readLiveScoreOverlayState } from "@/lib/live-score-store";
 
 export async function getLiveScoreData() {
   const { season, matches, playerStandings, standings, teams } = await getLeagueData();
@@ -13,7 +14,9 @@ export async function getLiveScoreData() {
     matchesPerDay.set(match.week, matchNumber);
     matchNumberById.set(match.id, matchNumber);
   });
-  const liveMatch = matches.find((match) => !isMatchFinished(match)) ?? null;
+  const overlayState = await readLiveScoreOverlayState();
+  const overlayMatch = overlayState ? matches.find((match) => match.id === overlayState.matchId) ?? null : null;
+  const liveMatch = overlayMatch ?? matches.find((match) => !isMatchFinished(match)) ?? null;
   const lastMatch = [...matches].reverse().find((match) => isMatchFinished(match)) ?? null;
   const featuredMatch = liveMatch ?? lastMatch;
 
@@ -24,7 +27,7 @@ export async function getLiveScoreData() {
     tournament: "Mobile Legends Diskominfo League",
     season: season?.name ?? "Season Internal 2026",
     status: liveMatch ? "live" : lastMatch ? "finished" : "waiting",
-    updatedAt: new Date().toISOString(),
+    updatedAt: overlayState?.updatedAt ?? new Date().toISOString(),
     match: featuredMatch
       ? {
           id: featuredMatch.id,
@@ -33,17 +36,17 @@ export async function getLiveScoreData() {
           teamA: {
             id: featuredMatch.teamAId,
             name: featuredMatch.teamAName,
-            score: featuredMatch.scoreA ?? 0,
+            score: overlayState && overlayState.matchId === featuredMatch.id ? overlayState.scoreA : featuredMatch.scoreA ?? 0,
             power: teamA?.power ?? 0
           },
           teamB: {
             id: featuredMatch.teamBId,
             name: featuredMatch.teamBName,
-            score: featuredMatch.scoreB ?? 0,
+            score: overlayState && overlayState.matchId === featuredMatch.id ? overlayState.scoreB : featuredMatch.scoreB ?? 0,
             power: teamB?.power ?? 0
           },
-          winnerId: featuredMatch.winnerId ?? null,
-          mvp: featuredMatch.mvp ?? null,
+          winnerId: overlayState && overlayState.matchId === featuredMatch.id ? null : featuredMatch.winnerId ?? null,
+          mvp: overlayState && overlayState.matchId === featuredMatch.id ? overlayState.mvp ?? null : featuredMatch.mvp ?? null,
           games: featuredMatch.games ?? []
         }
       : null,

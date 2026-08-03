@@ -15,3 +15,5 @@ secrets.json
 
 .project-security
 security-reports/
+# Local runtime state
+.data/
