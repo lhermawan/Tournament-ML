@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import path from "node:path";
 import { z } from "zod";
 import { clearSession, isAdmin, setSession } from "@/lib/auth";
+import { clearLiveScoreOverlayState, writeLiveScoreOverlayState } from "@/lib/live-score-store";
 import { calculateStandings, generateBalancedTeams, generateRoundRobin, isMatchFinished, rankPower } from "@/lib/tournament";
 import { roleFromDb, roleToDb } from "@/lib/enum-map";
 import { prisma } from "@/lib/prisma";
@@ -736,22 +737,16 @@ export async function updateLiveScore(formData: FormData) {
   const matchId = String(formData.get("matchId") ?? "");
   const scoreA = Math.max(0, Number(formData.get("scoreA") ?? 0));
   const scoreB = Math.max(0, Number(formData.get("scoreB") ?? 0));
-  const mvpNickname = String(formData.get("mvp") ?? "").trim();
+  const mvp = String(formData.get("mvp") ?? "").trim();
 
   const match = await prisma.match.findUnique({ where: { id: matchId } });
   if (!match) redirect("/admin?error=match-not-found");
 
-  const mvp = mvpNickname
-    ? await prisma.player.findFirst({ where: { nickname: { equals: mvpNickname } } })
-    : null;
-
-  await prisma.match.update({
-    where: { id: matchId },
-    data: {
-      scoreA,
-      scoreB,
-      ...(mvpNickname ? { mvpId: mvp?.id } : {})
-    }
+  await writeLiveScoreOverlayState({
+    matchId,
+    scoreA,
+    scoreB,
+    ...(mvp ? { mvp } : {})
   });
 
   revalidateAll();
@@ -761,25 +756,7 @@ export async function updateLiveScore(formData: FormData) {
 export async function resetLiveScore(formData: FormData) {
   await assertAdmin();
 
-  const matchId = String(formData.get("matchId") ?? "");
-  if (!matchId) redirect("/admin?error=match-not-found");
-
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
-  if (!match) redirect("/admin?error=match-not-found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.matchgame.deleteMany({ where: { matchId } });
-    await tx.match.update({
-      where: { id: matchId },
-      data: {
-        scoreA: null,
-        scoreB: null,
-        winnerId: null,
-        mvpId: null,
-        screenshotUrl: null
-      }
-    });
-  });
+  await clearLiveScoreOverlayState();
 
   revalidateAll();
   redirect("/admin?notice=live-reset");

@@ -85,8 +85,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "teams-generated" && "Team berhasil digenerate."}
           {params.notice === "schedule-generated" && "Jadwal berhasil digenerate."}
           {params.notice === "playoff-generated" && "Bracket double elimination Top 4 berhasil dibuat."}
-          {params.notice === "live-updated" && "Live score berhasil diupdate."}
-          {params.notice === "live-reset" && "Live score berhasil direset."}
+          {params.notice === "live-updated" && "Live score overlay berhasil diupdate."}
+          {params.notice === "live-reset" && "Live score overlay berhasil direset."}
           {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
           {params.notice === "player-verified" && "Peserta berhasil diverifikasi."}
           {params.notice === "match-saved" && "Hasil match berhasil disimpan."}
@@ -340,7 +340,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         <Card>
           <CardHeader>
             <CardTitle>Live Score & Hasil Match</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Update skor live untuk overlay, lalu simpan hasil final setelah match selesai.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Update skor live hanya untuk overlay. Hasil final tetap disimpan terpisah lewat upload screenshot.</p>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-3 rounded-md border border-border bg-muted p-4">
@@ -432,16 +432,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm font-semibold">
                   Skor Team A
-                  <input name="scoreA" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" type="number" min="0" defaultValue={pendingMatch?.scoreA ?? 0} />
+                  <input name="scoreA" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" type="number" min="0" defaultValue="0" />
                 </label>
                 <label className="block text-sm font-semibold">
                   Skor Team B
-                  <input name="scoreB" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" type="number" min="0" defaultValue={pendingMatch?.scoreB ?? 0} />
+                  <input name="scoreB" className="mt-2 h-10 w-full rounded-md border border-border px-3 text-sm" type="number" min="0" defaultValue="0" />
                 </label>
               </div>
               <label className="block text-sm font-semibold">
                 MVP Sementara
-                <input name="mvp" list="player-nicknames" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm" placeholder="Nickname MVP sementara" defaultValue={pendingMatch?.mvp ?? ""} />
+                <input name="mvp" list="player-nicknames" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm" placeholder="Nickname MVP sementara" />
               </label>
               <div className="grid gap-3 md:grid-cols-2">
                 <ActionSubmitButton className="w-full" label="Update Live Score" pendingLabel="Mengupdate live score..." />
