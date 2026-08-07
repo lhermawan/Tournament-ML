@@ -852,7 +852,7 @@ export async function saveMatchGameResult(formData: FormData) {
   });
 
   revalidateAll();
-  redirect("/admin?gameSaved=1");
+  redirect("/admin?gameSaved=advanced");
 }
 
 export async function saveMatchResult(formData: FormData) {
@@ -889,7 +889,7 @@ export async function saveMatchResult(formData: FormData) {
   });
 
   revalidateAll();
-  redirect("/admin?notice=match-saved");
+  redirect(winnerId ? "/admin?notice=match-saved-advanced" : "/admin?notice=match-saved");
 }
 
 export async function moveTeamMemberAction(formData: FormData) {
