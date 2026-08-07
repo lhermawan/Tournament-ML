@@ -93,6 +93,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           {params.notice === "all-verified" && "Semua peserta berhasil diverifikasi."}
           {params.notice === "player-verified" && "Peserta berhasil diverifikasi."}
           {params.notice === "match-saved" && "Hasil match berhasil disimpan."}
+          {params.notice === "match-saved-advanced" && "Hasil match berhasil disimpan. Jika ini match playoff dan slot lawan sudah siap, pemenang otomatis masuk ke bracket berikutnya."}
           {params.notice === "player-deleted" && "Peserta berhasil dihapus."}
           {params.notice === "team-deleted" && "Team dan jadwal terkait berhasil dihapus."}
           {params.notice === "schedule-updated" && "Jadwal match berhasil diperbarui."}
@@ -413,7 +414,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
             {params?.gameSaved && (
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-                Detail game/KDA berhasil disimpan. Bracket awal sampai semifinal BO3, final BO5.
+                Detail game/KDA berhasil disimpan. Jika ini match playoff dan slot lawan sudah siap, pemenang otomatis masuk ke bracket berikutnya. Bracket awal sampai semifinal BO3, final BO5.
               </p>
             )}
             {params?.gameError && (
@@ -457,7 +458,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
             <form action={saveMatchGameResult} className="space-y-4 rounded-md border border-border bg-white p-4">
               <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
-                Format bracket: ronde awal sampai semifinal menggunakan BO3 (butuh 2 win), sedangkan final menggunakan BO5 (butuh 3 win).
+                Format bracket: ronde awal sampai semifinal menggunakan BO3 (butuh 2 win), final menggunakan BO5 (butuh 3 win), dan pemenang playoff otomatis maju setelah hasil series tersimpan.
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm font-semibold">
