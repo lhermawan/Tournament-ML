@@ -419,7 +419,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             )}
             {params?.gameError && (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-                Detail game belum lengkap. Pilih match, game, winner, dan isi data yang diperlukan.
+                {params.gameError === "playoff-draw"
+                  ? "Match playoff tidak boleh seri. Jika skor 1-1 di BO3, simpan Game 3 sampai ada winner."
+                  : "Detail game belum lengkap. Pilih match, game, winner, dan isi data yang diperlukan."}
               </p>
             )}
             <form action={updateLiveScore} className="space-y-4 rounded-md border border-border bg-muted p-4">

@@ -863,8 +863,9 @@ export async function saveMatchResult(formData: FormData) {
   const mvpNickname = String(formData.get("mvp") ?? "").trim();
   const screenshotUrl = String(formData.get("screenshotUrl") ?? "").trim();
 
-  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  const match = await prisma.match.findUnique({ where: { id: matchId }, include: { season: true } });
   if (!match) redirect("/admin?error=match-not-found");
+  if (match.season.status === "playoff" && scoreA === scoreB) redirect("/admin?gameError=playoff-draw");
 
   const winnerId = scoreA === scoreB ? null : scoreA > scoreB ? match.teamAId : match.teamBId;
   const mvp = mvpNickname
