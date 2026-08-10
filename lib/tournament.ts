@@ -132,9 +132,13 @@ export function generateRoundRobin(teams: Team[]): Match[] {
 export function isMatchFinished(match: Match): boolean {
   if (match.winnerId) return true;
   if (match.scoreA === undefined || match.scoreB === undefined) return false;
+
+  const hasSeriesGames = (match.games?.length ?? 0) > 0;
+  if (hasSeriesGames) return false;
+
   if (match.scoreA === match.scoreB) return true;
 
-  return (match.games?.length ?? 0) === 0;
+  return true;
 }
 
 export function calculateStandings(teams: Team[], matches: Match[]): Standing[] {
