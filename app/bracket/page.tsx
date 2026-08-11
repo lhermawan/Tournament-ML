@@ -78,6 +78,8 @@ export default async function BracketPage() {
               slot={slot}
               match={playoffMatches[index]}
               standings={standings}
+              playoffMatches={playoffMatches}
+              slotIndex={index}
               delay={index * 130}
             />
           ))}
@@ -91,16 +93,21 @@ function BracketMatch({
   slot,
   match,
   standings,
+  playoffMatches,
+  slotIndex,
   delay
 }: {
   slot: (typeof bracketSlots)[number];
   match?: Match;
   standings: Standing[];
+  playoffMatches: Match[];
+  slotIndex: number;
   delay: number;
 }) {
   const finished = match ? isMatchFinished(match) : false;
-  const teamA = match?.teamAName ?? slot.teamA;
-  const teamB = match?.teamBName ?? slot.teamB;
+  const resolvedTeams = resolveBracketSlotTeams(slotIndex, slot, match, playoffMatches, standings);
+  const teamA = resolvedTeams.teamA;
+  const teamB = resolvedTeams.teamB;
   const winnerName = match?.winnerId ? getTeamName(match.winnerId, standings, match) : null;
 
   return (
@@ -122,6 +129,64 @@ function BracketMatch({
       </div>
     </article>
   );
+}
+
+function resolveBracketSlotTeams(
+  slotIndex: number,
+  slot: (typeof bracketSlots)[number],
+  match: Match | undefined,
+  playoffMatches: Match[],
+  standings: Standing[]
+) {
+  const fallback = { teamA: slot.teamA, teamB: slot.teamB };
+  const matchNames = {
+    teamA: match?.teamAName && match.teamAName !== "TBD" ? match.teamAName : undefined,
+    teamB: match?.teamBName && match.teamBName !== "TBD" ? match.teamBName : undefined
+  };
+
+  if (slotIndex === 2) {
+    return {
+      teamA: matchNames.teamA ?? getMatchWinnerName(playoffMatches[0], standings) ?? fallback.teamA,
+      teamB: matchNames.teamB ?? getMatchWinnerName(playoffMatches[1], standings) ?? fallback.teamB
+    };
+  }
+
+  if (slotIndex === 3) {
+    return {
+      teamA: matchNames.teamA ?? getMatchLoserName(playoffMatches[0]) ?? fallback.teamA,
+      teamB: matchNames.teamB ?? getMatchLoserName(playoffMatches[1]) ?? fallback.teamB
+    };
+  }
+
+  if (slotIndex === 4) {
+    return {
+      teamA: matchNames.teamA ?? getMatchLoserName(playoffMatches[2]) ?? fallback.teamA,
+      teamB: matchNames.teamB ?? getMatchWinnerName(playoffMatches[3], standings) ?? fallback.teamB
+    };
+  }
+
+  if (slotIndex === 5) {
+    return {
+      teamA: matchNames.teamA ?? getMatchWinnerName(playoffMatches[2], standings) ?? fallback.teamA,
+      teamB: matchNames.teamB ?? getMatchWinnerName(playoffMatches[4], standings) ?? fallback.teamB
+    };
+  }
+
+  return {
+    teamA: matchNames.teamA ?? fallback.teamA,
+    teamB: matchNames.teamB ?? fallback.teamB
+  };
+}
+
+function getMatchWinnerName(match: Match | undefined, standings: Standing[]) {
+  return match?.winnerId ? getTeamName(match.winnerId, standings, match) : null;
+}
+
+function getMatchLoserName(match: Match | undefined) {
+  if (!match?.winnerId) return null;
+  if (match.winnerId === match.teamAId) return match.teamBName;
+  if (match.winnerId === match.teamBId) return match.teamAName;
+  return null;
 }
 
 function TeamRow({ name, score, active }: { name: string; score?: number; active: boolean }) {
