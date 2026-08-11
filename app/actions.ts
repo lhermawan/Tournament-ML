@@ -14,6 +14,8 @@ import { roleFromDb, roleToDb } from "@/lib/enum-map";
 import { prisma } from "@/lib/prisma";
 import { ROLES, type Match, type Player, type Team } from "@/lib/types";
 
+const PLAYOFF_TBD_TEAM_NAME = "TBD";
+
 const roleSchema = z.enum(["Jungler", "Mid Lane", "Gold Lane", "EXP Lane", "Roamer"]);
 const rankSchema = z.enum(["Master", "Grandmaster", "Epic", "Legend", "Mythic"]);
 
@@ -824,7 +826,7 @@ export async function saveMatchGameResult(formData: FormData) {
     const teamAWins = games.filter((game) => game.winnerId === match.teamAId).length;
     const teamBWins = games.filter((game) => game.winnerId === match.teamBId).length;
     const isLeagueStage = match.season.status === "league";
-    const teamCount = await tx.team.count({ where: { seasonId: match.seasonId } });
+    const teamCount = await countPlayableTeams(tx, match.seasonId);
     const leagueWeekCount = Math.ceil(((teamCount * (teamCount - 1)) / 2) / 2);
     const playoffMatches = await tx.match.findMany({
       where: { seasonId: match.seasonId, week: { gt: leagueWeekCount } },
@@ -956,42 +958,113 @@ async function ensureNextPlayoffMatches(tx: any, seasonId: string) {
   const season = await tx.season.findUnique({ where: { id: seasonId } });
   if (season?.status !== "playoff") return;
 
-  const teamCount = await tx.team.count({ where: { seasonId } });
+  const teamCount = await countPlayableTeams(tx, seasonId);
   const leagueWeekCount = Math.ceil(((teamCount * (teamCount - 1)) / 2) / 2);
-  const playoffMatches = await tx.match.findMany({
-    where: { seasonId, week: { gt: leagueWeekCount } },
-    orderBy: [{ week: "asc" }, { createdAt: "asc" }]
-  });
+  const tbdTeamId = await getOrCreatePlayoffTbdTeamId(tx, seasonId);
 
-  const [match1, match2, match3, match4, match5, match6] = playoffMatches;
-  const match1Loser = match1?.winnerId ? (match1.winnerId === match1.teamAId ? match1.teamBId : match1.teamAId) : null;
-  const match2Loser = match2?.winnerId ? (match2.winnerId === match2.teamAId ? match2.teamBId : match2.teamAId) : null;
-  const match3Loser = match3?.winnerId ? (match3.winnerId === match3.teamAId ? match3.teamBId : match3.teamAId) : null;
-
-  if (playoffMatches.length === 2 && match1?.winnerId && match2?.winnerId && match1Loser && match2Loser) {
-    const week = nextPlayoffWeek(playoffMatches);
-    await tx.match.createMany({
-      data: [
-        buildMatchRecord(seasonId, week, match1.winnerId, match2.winnerId),
-        buildMatchRecord(seasonId, week, match1Loser, match2Loser)
-      ]
+  let advanced = true;
+  while (advanced) {
+    advanced = false;
+    const playoffMatches = await tx.match.findMany({
+      where: { seasonId, week: { gt: leagueWeekCount } },
+      orderBy: [{ week: "asc" }, { createdAt: "asc" }]
     });
-    return;
-  }
 
-  if (playoffMatches.length === 4 && match3?.winnerId && match4?.winnerId && match3Loser) {
-    await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3Loser, match4.winnerId) });
-    return;
-  }
+    const [match1, match2, match3, match4, match5, match6] = playoffMatches;
+    const match1Loser = getMatchLoserId(match1);
+    const match2Loser = getMatchLoserId(match2);
+    const match3Loser = getMatchLoserId(match3);
 
-  if (playoffMatches.length === 5 && match3?.winnerId && match5?.winnerId) {
-    await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3.winnerId, match5.winnerId) });
-    return;
-  }
+    if (playoffMatches.length === 2 && (match1?.winnerId || match2?.winnerId)) {
+      const week = nextPlayoffWeek(playoffMatches);
+      await tx.match.createMany({
+        data: [
+          buildMatchRecord(seasonId, week, match1?.winnerId ?? tbdTeamId, match2?.winnerId ?? tbdTeamId),
+          buildMatchRecord(seasonId, week, match1Loser ?? tbdTeamId, match2Loser ?? tbdTeamId)
+        ]
+      });
+      advanced = true;
+      continue;
+    }
 
-  if (playoffMatches.length === 6 && match6?.winnerId) {
-    await tx.season.update({ where: { id: seasonId }, data: { status: "completed", updatedAt: new Date() } });
+    if (playoffMatches.length >= 4) {
+      const updatedWinnerFinal = await fillPlayoffMatchSlots(tx, match3, match1?.winnerId, match2?.winnerId, tbdTeamId);
+      const updatedLowerBracket = await fillPlayoffMatchSlots(tx, match4, match1Loser, match2Loser, tbdTeamId);
+      advanced = updatedWinnerFinal || updatedLowerBracket;
+      if (advanced) continue;
+    }
+
+    if (playoffMatches.length === 4 && (match3Loser || match4?.winnerId)) {
+      await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3Loser ?? tbdTeamId, match4?.winnerId ?? tbdTeamId) });
+      advanced = true;
+      continue;
+    }
+
+    if (playoffMatches.length >= 5) {
+      const updatedLowerFinal = await fillPlayoffMatchSlots(tx, match5, match3Loser, match4?.winnerId, tbdTeamId);
+      if (updatedLowerFinal) {
+        advanced = true;
+        continue;
+      }
+    }
+
+    if (playoffMatches.length === 5 && (match3?.winnerId || match5?.winnerId)) {
+      await tx.match.create({ data: buildMatchRecord(seasonId, nextPlayoffWeek(playoffMatches), match3?.winnerId ?? tbdTeamId, match5?.winnerId ?? tbdTeamId) });
+      advanced = true;
+      continue;
+    }
+
+    if (playoffMatches.length >= 6) {
+      const updatedGrandFinal = await fillPlayoffMatchSlots(tx, match6, match3?.winnerId, match5?.winnerId, tbdTeamId);
+      if (updatedGrandFinal) {
+        advanced = true;
+        continue;
+      }
+    }
+
+    if (playoffMatches.length === 6 && match6?.winnerId) {
+      await tx.season.update({ where: { id: seasonId }, data: { status: "completed", updatedAt: new Date() } });
+    }
   }
+}
+
+async function countPlayableTeams(tx: any, seasonId: string) {
+  return tx.team.count({ where: { seasonId, teamName: { not: PLAYOFF_TBD_TEAM_NAME } } });
+}
+
+async function getOrCreatePlayoffTbdTeamId(tx: any, seasonId: string) {
+  const existing = await tx.team.findFirst({ where: { seasonId, teamName: PLAYOFF_TBD_TEAM_NAME }, select: { id: true } });
+  if (existing) return existing.id;
+
+  const team = await tx.team.create({
+    data: {
+      id: randomUUID(),
+      seasonId,
+      teamName: PLAYOFF_TBD_TEAM_NAME,
+      power: 0,
+      updatedAt: new Date()
+    },
+    select: { id: true }
+  });
+  return team.id;
+}
+
+async function fillPlayoffMatchSlots(tx: any, match: { id: string; teamAId: string; teamBId: string } | undefined, teamAId: string | null | undefined, teamBId: string | null | undefined, tbdTeamId: string) {
+  if (!match) return false;
+
+  const data: { teamAId?: string; teamBId?: string; updatedAt?: Date } = {};
+  if (teamAId && match.teamAId === tbdTeamId) data.teamAId = teamAId;
+  if (teamBId && match.teamBId === tbdTeamId) data.teamBId = teamBId;
+  if (!data.teamAId && !data.teamBId) return false;
+
+  data.updatedAt = new Date();
+  await tx.match.update({ where: { id: match.id }, data });
+  return true;
+}
+
+function getMatchLoserId(match?: { teamAId: string; teamBId: string; winnerId: string | null }) {
+  if (!match?.winnerId) return null;
+  return match.winnerId === match.teamAId ? match.teamBId : match.teamAId;
 }
 
 function mapDbTeamsForTournament(dbTeams: any[]): Team[] {

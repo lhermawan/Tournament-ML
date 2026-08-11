@@ -67,7 +67,7 @@ export async function getLeagueData() {
       };
     }
 
-    const teams = season.team.map((team) => ({
+    const teams = season.team.filter((team) => team.teamName !== "TBD").map((team) => ({
       id: team.id,
       name: team.teamName,
       power: team.power,

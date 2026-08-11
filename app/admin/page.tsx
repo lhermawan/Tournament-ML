@@ -60,7 +60,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const params = await searchParams;
   const { isDemo, season, players, teams, matches } = await getLeagueData();
-  const pendingMatch = matches.find((match) => !isMatchFinished(match));
+  const pendingMatch = matches.find((match) => !isMatchFinished(match) && isPlayableMatch(match));
   const playerError = params?.playerError;
   const playoffStartWeek = teams.length >= 2 ? Math.ceil(((teams.length * (teams.length - 1)) / 2) / 2) + 1 : Number.POSITIVE_INFINITY;
   const playoffMatches = matches.filter((match) => match.week >= playoffStartWeek);
@@ -428,7 +428,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <label className="block text-sm font-semibold">
                 Match Live
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
@@ -466,7 +466,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <label className="block text-sm font-semibold">
                   Match Series
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                    {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                    {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                       <option key={match.id} value={match.id}>
                         Day {match.week}: {match.teamAName} vs {match.teamBName} - {getSeriesFormat(match.week, playoffStartWeek, finalWeek)}
                       </option>
@@ -608,7 +608,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <label className="block text-sm font-semibold">
                 Match Final
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
@@ -723,6 +723,10 @@ function AdminField({
       />
     </label>
   );
+}
+
+function isPlayableMatch(match: { teamAName: string; teamBName: string }) {
+  return match.teamAName !== "TBD" && match.teamBName !== "TBD";
 }
 
 function getSeriesFormat(week: number, playoffStartWeek: number, finalWeek: number) {
