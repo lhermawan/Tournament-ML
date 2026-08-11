@@ -60,7 +60,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const params = await searchParams;
   const { isDemo, season, players, teams, matches } = await getLeagueData();
-  const pendingMatch = matches.find((match) => !isMatchFinished(match));
+  const pendingMatch = matches.find((match) => !isMatchFinished(match) && isPlayableMatch(match));
   const playerError = params?.playerError;
   const playoffStartWeek = teams.length >= 2 ? Math.ceil(((teams.length * (teams.length - 1)) / 2) / 2) + 1 : Number.POSITIVE_INFINITY;
   const playoffMatches = matches.filter((match) => match.week >= playoffStartWeek);
@@ -419,14 +419,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             )}
             {params?.gameError && (
               <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-                Detail game belum lengkap. Pilih match, game, winner, dan isi data yang diperlukan.
+                {params.gameError === "playoff-draw"
+                  ? "Match playoff tidak boleh seri. Jika skor 1-1 di BO3, simpan Game 3 sampai ada winner."
+                  : "Detail game belum lengkap. Pilih match, game, winner, dan isi data yang diperlukan."}
               </p>
             )}
             <form action={updateLiveScore} className="space-y-4 rounded-md border border-border bg-muted p-4">
               <label className="block text-sm font-semibold">
                 Match Live
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
@@ -464,7 +466,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <label className="block text-sm font-semibold">
                   Match Series
                   <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                    {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                    {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                       <option key={match.id} value={match.id}>
                         Day {match.week}: {match.teamAName} vs {match.teamBName} - {getSeriesFormat(match.week, playoffStartWeek, finalWeek)}
                       </option>
@@ -606,7 +608,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <label className="block text-sm font-semibold">
                 Match Final
                 <select name="matchId" className="mt-2 h-10 w-full rounded-md border border-border bg-white px-3 text-sm">
-                  {matches.filter((match) => !isMatchFinished(match)).map((match) => (
+                  {matches.filter((match) => !isMatchFinished(match) && isPlayableMatch(match)).map((match) => (
                     <option key={match.id} value={match.id}>
                       Day {match.week}: {match.teamAName} vs {match.teamBName}
                     </option>
@@ -721,6 +723,10 @@ function AdminField({
       />
     </label>
   );
+}
+
+function isPlayableMatch(match: { teamAName: string; teamBName: string }) {
+  return match.teamAName !== "TBD" && match.teamBName !== "TBD";
 }
 
 function getSeriesFormat(week: number, playoffStartWeek: number, finalWeek: number) {
