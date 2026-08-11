@@ -350,7 +350,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             <div className="space-y-3 rounded-md border border-border bg-muted p-4">
               <div>
                 <p className="text-sm font-black">Atur Jadwal Manual</p>
-                <p className="text-xs text-muted-foreground">Admin bisa mengganti day dan pasangan team untuk setiap match.</p>
+                <p className="text-xs text-muted-foreground">Admin bisa mengganti day dan pasangan team untuk setiap match, termasuk override manual slot playoff yang masih TBD.</p>
               </div>
               <form action={createManualMatchSchedule} className="grid gap-3 rounded-md border border-dashed border-primary/40 bg-white p-3 md:grid-cols-[80px_1fr_1fr_auto]">
                 <input name="seasonId" type="hidden" value={season?.id ?? ""} />
@@ -390,6 +390,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <label className="block text-xs font-semibold">
                     Team A
                     <select name="teamAId" defaultValue={match.teamAId} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                      {!teams.some((team) => team.id === match.teamAId) && (
+                        <option value={match.teamAId}>{match.teamAName} (slot otomatis)</option>
+                      )}
                       {teams.map((team) => (
                         <option key={team.id} value={team.id}>{team.name}</option>
                       ))}
@@ -398,6 +401,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   <label className="block text-xs font-semibold">
                     Team B
                     <select name="teamBId" defaultValue={match.teamBId} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 text-sm">
+                      {!teams.some((team) => team.id === match.teamBId) && (
+                        <option value={match.teamBId}>{match.teamBName} (slot otomatis)</option>
+                      )}
                       {teams.map((team) => (
                         <option key={team.id} value={team.id}>{team.name}</option>
                       ))}
